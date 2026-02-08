@@ -1,0 +1,128 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="GymNow - 고도로 세련된 헬스장 라이프를 위한 프리미엄 솔루션" />
+  <title>GymNow | 프리미엄 헬스장 현황</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css?v=1.3">
+</head>
+
+<body>
+  <div class="app-container">
+
+    <!-- View: Intro -->
+    <section id="view-intro" class="view active">
+      <div class="intro-content">
+        <header class="hero-section">
+          <div class="logo-animation">💪</div>
+          <h1 class="main-title">GymNow</h1>
+          <p class="tagline">정교하게 설계된<br>커뮤니티 헬스 라이프</p>
+        </header>
+
+        <div class="action-footer">
+          <button id="btn-start" class="btn-primary">시작하기</button>
+          <p class="helper-text">이미 헬스장 관장님이신가요?</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- View: Search (Home) -->
+    <section id="view-home" class="view">
+      <!-- Search focus -->
+      <div class="search-header">
+        <h2 class="section-title">주변 헬스장</h2>
+        <div class="search-input-wrapper">
+          <input type="text" id="gym-search" placeholder="이름으로 검색..." />
+        </div>
+      </div>
+
+      <div id="gym-list" class="gym-grid">
+        <!-- Gym cards will be injected here -->
+      </div>
+    </section>
+
+    <!-- View: Profile -->
+    <section id="view-profile" class="view">
+      <div class="profile-header">
+        <div class="avatar-circle">👤</div>
+        <h2 class="user-name">게스트 사용자</h2>
+        <p class="user-email">guest@gymnow.com</p>
+      </div>
+
+      <div class="profile-menu">
+        <div class="menu-item">
+          <span>내 헬스장 설정</span>
+          <span>→</span>
+        </div>
+        <div class="menu-item">
+          <span>운동 스트릭 확인</span>
+          <span>🔥 0</span>
+        </div>
+        <div class="menu-item">
+          <span>Google 계정 연동</span>
+          <span>🗝️</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- View: Detail -->
+    <section id="view-detail" class="view">
+      <div class="detail-header">
+        <button id="btn-back" class="btn-back">← 돌아가기</button>
+      </div>
+
+      <div id="detail-content" class="detail-container">
+        <!-- Content will be injected here -->
+      </div>
+    </section>
+
+    <!-- Navigation -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-target="view-home">
+        <span class="icon">🏠</span>
+        <span class="label">홈</span>
+      </button>
+      <button class="nav-btn" data-target="view-profile">
+        <span class="icon">👤</span>
+        <span class="label">내 정보</span>
+      </button>
+    </nav>
+
+    <!-- Consultation Modal -->
+    <div id="modal-consultation" class="modal">
+      <div class="modal-content">
+        <button class="modal-close">&times;</button>
+        <h2 class="modal-title">프리미엄 상담 신청</h2>
+        <p class="modal-subtitle">전문 상담원이 곧 연락을 드릴 예정입니다.</p>
+
+        <form id="form-consultation" class="consult-form">
+          <div class="form-group">
+            <label for="user-name">성함</label>
+            <input type="text" id="user-name" placeholder="홍길동" required />
+          </div>
+          <div class="form-group">
+            <label for="user-phone">연락처</label>
+            <input type="tel" id="user-phone" placeholder="010-1234-5678" required />
+          </div>
+          <button type="submit" class="btn-primary full-width" id="btn-submit-consult">지금 신청하기</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script type="module" src="script.js?v=1.5"></script>
+</body>
+
+</html>

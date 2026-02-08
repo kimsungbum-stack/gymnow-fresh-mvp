@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Gyms & Trainers: 누구나 읽기 가능
+    match /gyms/{document=**} {
+      allow read: if true;
+      allow write: if false; // 관리자 도구로만 업데이트
+    }
+    match /trainers/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Applications (상담 신청): 누구나 생성 가능, 본인만 조회 (간소화)
+    match /applications/{docId} {
+      allow create: if true;
+      allow read: if false; 
+    }
+
+    // Checkins: 인증된 사용자만 생성 가능
+    match /checkins/{docId} {
+      allow create: if request.auth != null;
+      allow read: if true; 
+    }
+  }
+}
