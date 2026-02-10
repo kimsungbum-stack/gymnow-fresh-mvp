@@ -140,13 +140,18 @@ function switchView(viewId) {
   views.forEach(v => v.classList.remove('active'));
   targetView.classList.add('active');
   window.scrollTo(0, 0);
-  if (viewId === 'view-home') {
-    renderEarlyVerifiedTrainers();
-    renderGymList();
-  }
-  if (viewId === 'view-admin') renderAdminDashboard();
-
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
+
+  // Bottom Navigation Visibility Control
+  const bottomNav = document.querySelector('.bottom-nav');
+  if (bottomNav) {
+    const viewsWithNav = ['view-home', 'view-profile', 'view-admin', 'view-gym-detail', 'view-trainer-detail'];
+    if (viewsWithNav.includes(viewId)) {
+      bottomNav.classList.add('nav-visible');
+    } else {
+      bottomNav.classList.remove('nav-visible');
+    }
+  }
 }
 
 /**
