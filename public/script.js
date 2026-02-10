@@ -10,7 +10,7 @@ import {
   db, collection, onSnapshot, query, orderBy,
   getDoc, doc, getDocs, where, addDoc,
   serverTimestamp, limit, signInWithPopup
-} from './firebase-config.js';
+} from './firebase-config.js?v=3.5';
 
 // Global error handling
 window.addEventListener('error', (e) => {
@@ -24,7 +24,7 @@ window.addEventListener('error', (e) => {
  * Initialization
  */
 function init() {
-  console.log('GymNow v2.8 Initializing...');
+  console.log('GymNow v3.5 (KakaoTalk Fix) Initializing...');
   initNavigation();
   initDetailEvents();
   initModalEvents();
@@ -542,4 +542,4 @@ window.selectRegion = selectRegion;
 window.switchView = switchView;
 window.openPartnerModal = openPartnerModal;
 
-console.log('GymNow v2.8 Online');
+console.log('GymNow v3.5 Online 🚀');
