@@ -4,11 +4,30 @@
 */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js';
-import { getFirestore, collection, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js';
+import {
+  getFirestore,
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  getDoc,
+  doc,
+  getDocs,
+  where,
+  addDoc,
+  serverTimestamp,
+  limit
+} from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut
+} from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDE-zkRDTCI", // Extracted actual key
+  apiKey: "AIzaSyDE-zkRDTCI",
   authDomain: "gymnow-mvp.firebaseapp.com",
   projectId: "gymnow-mvp",
   storageBucket: "gymnow-mvp.appspot.com",
@@ -21,4 +40,10 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-export { app, db, auth, googleProvider, collection, onSnapshot, query, orderBy, signInWithPopup, onAuthStateChanged, signOut };
+export {
+  app, db, auth, googleProvider,
+  collection, onSnapshot, query, orderBy,
+  getDoc, doc, getDocs, where, addDoc,
+  serverTimestamp, limit,
+  signInWithPopup, onAuthStateChanged, signOut
+};

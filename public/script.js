@@ -3,40 +3,49 @@
   - SPA Navigation
   - State Management
   - Firebase Real-time Integration
+  Version 2.8 (Stability & Premium Card UI)
 */
 
-import { db, collection, onSnapshot, query, orderBy, signInWithPopup } from './firebase-config.js';
-import { getDoc, doc, getDocs, where, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
+import {
+  db, collection, onSnapshot, query, orderBy,
+  getDoc, doc, getDocs, where, addDoc,
+  serverTimestamp, limit, signInWithPopup
+} from './firebase-config.js';
 
-// Global error handling to catch module load issues
+// Global error handling
 window.addEventListener('error', (e) => {
   console.error('Runtime Error:', e.message);
-  if (typeof showToast === 'function') {
+  if (window.showToast) {
     showToast(`에러 발생: ${e.message}`, 'error');
   }
 });
 
-window.addEventListener('unhandledrejection', (e) => {
-  console.error('Unhandled Promise Rejection:', e.reason);
-});
-
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * Initialization
+ */
+function init() {
+  console.log('GymNow v2.8 Initializing...');
   initNavigation();
   initDetailEvents();
   initModalEvents();
-});
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
 
-/**
- * Global Gym ID state for consultation
- */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
 let currentActiveGymId = null;
 
 /**
- * SPA Navigation System
+ * SPA Navigation
  */
 function initNavigation() {
   const navButtons = document.querySelectorAll('.nav-btn');
-  const views = document.querySelectorAll('.view');
   const startBtn = document.getElementById('btn-start');
 
   navButtons.forEach(btn => {
@@ -50,19 +59,11 @@ function initNavigation() {
 
   if (startBtn) {
     startBtn.addEventListener('click', () => {
-      switchView('view-home');
-      const homeNav = document.querySelector('[data-target="view-home"]');
-      if (homeNav) {
-        navButtons.forEach(b => b.classList.remove('active'));
-        homeNav.classList.add('active');
-      }
+      switchView('view-region-select');
     });
   }
 }
 
-/**
- * Handle events for the Detail View
- */
 function initDetailEvents() {
   const backBtn = document.getElementById('btn-back');
   if (backBtn) {
@@ -77,24 +78,17 @@ function initDetailEvents() {
   }
 }
 
-/**
- * Handle events for Modal
- */
 function initModalEvents() {
   const modal = document.getElementById('modal-consultation');
   const closeBtn = document.querySelector('.modal-close');
   const form = document.getElementById('form-consultation');
 
   if (closeBtn && modal) {
-    closeBtn.addEventListener('click', () => {
-      modal.classList.remove('active');
-    });
+    closeBtn.addEventListener('click', () => modal.classList.remove('active'));
   }
 
   window.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.classList.remove('active');
-    }
+    if (e.target === modal) modal.classList.remove('active');
   });
 
   if (form) {
@@ -110,9 +104,7 @@ function initModalEvents() {
       }
 
       try {
-        if (!currentActiveGymId) {
-          throw new Error('센터 정보가 유실되었습니다. 다시 시도해 주세요.');
-        }
+        if (!currentActiveGymId) throw new Error('센터 정보가 유실되었습니다.');
 
         await addDoc(collection(db, 'applications'), {
           gymId: currentActiveGymId,
@@ -127,11 +119,11 @@ function initModalEvents() {
         form.reset();
       } catch (error) {
         console.error('Submission error:', error);
-        showToast(`오류가 발생했습니다: ${error.message}`, 'error');
+        showToast(`오류 발생: ${error.message}`, 'error');
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.innerText = '지금 신청하기';
+          submitBtn.innerText = '상담 신청 (에스크로 보호)';
         }
       }
     });
@@ -139,7 +131,7 @@ function initModalEvents() {
 }
 
 /**
- * Switch between views
+ * Switch View
  */
 function switchView(viewId) {
   const views = document.querySelectorAll('.view');
@@ -148,121 +140,327 @@ function switchView(viewId) {
   views.forEach(v => v.classList.remove('active'));
   targetView.classList.add('active');
   window.scrollTo(0, 0);
-  if (viewId === 'view-home') renderGymList();
+  if (viewId === 'view-home') {
+    renderEarlyVerifiedTrainers();
+    renderGymList();
+  }
+  if (viewId === 'view-admin') renderAdminDashboard();
+
+  setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
 }
 
 /**
- * Render Gym List
+ * Gym List (Live Data)
  */
-function renderGymList() {
+async function renderGymList() {
   const container = document.getElementById('gym-list');
   if (!container) return;
-  container.innerHTML = '<div class="loading-spinner">✨ 정보를 가져오는 중...</div>';
-  const q = query(collection(db, 'gyms'), orderBy('name', 'asc'));
-  onSnapshot(q, (snapshot) => {
-    if (snapshot.empty) {
-      container.innerHTML = '<div class="empty-state">등록된 헬스장이 없습니다.</div>';
+
+  container.innerHTML = '<div class="loading-spinner">🏙️ 대구 참여 센터 로딩 중...</div>';
+
+  try {
+    console.log('Fetching gyms from Firestore...');
+    const q = query(collection(db, 'gyms'), orderBy('name', 'asc'));
+    const snapshot = await getDocs(q);
+    const gyms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    console.log(`Fetched ${gyms.length} gyms`);
+
+    if (gyms.length === 0) {
+      container.innerHTML = '<div class="empty-state">대구 지역 참여 센터 정보 준비 중...</div>';
       return;
     }
-    container.innerHTML = snapshot.docs.map(doc => {
-      const gym = doc.data();
-      const id = doc.id;
-      return `
-        <div class="gym-card" data-id="${id}">
-          <div class="gym-card-image" style="background-image: url('${gym.photoURL || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=400'}')"></div>
-          <div class="gym-card-content">
-            <div class="gym-card-header">
-              <h3 class="gym-card-name">${gym.name}</h3>
-              <span class="status-badge status-${gym.status || 'safe'}">${gym.occupancy || '여유'}</span>
-            </div>
-            <div class="gym-card-area">${gym.area || ''}</div>
-            <div class="gym-card-footer">
-              <div class="footer-item">⭐ ${gym.rating || '0.0'}</div>
-              <div class="footer-item">💪 센터 정보</div>
-            </div>
+
+    const banner = document.getElementById('recruitment-banner');
+    if (banner) {
+      banner.innerText = `대구 파일럿 참여 센터 (${gyms.filter(g => g.isPilot).length}/5)`;
+    }
+
+    container.innerHTML = gyms.map(gym => `
+      <div class="gym-card" onclick="window.showGymDetail('${gym.id}')">
+        <div class="gym-card-image" style="background-image: url('${gym.imageUrl}')">
+          ${gym.isPilot ? '<div class="pilot-badge">💎 GymNow Pilot</div>' : ''}
+        </div>
+        <div class="gym-card-content">
+          <div class="gym-card-header">
+            <h3 class="gym-card-name">${gym.name}</h3>
+            <span class="status-badge status-safe">상담가능</span>
+          </div>
+          <div class="gym-card-area">${gym.region}</div>
+          <div class="gym-card-footer">
+            <div class="footer-item"><i data-lucide="users"></i> 전문가 ${gym.trainerCount || 0}명</div>
+            <div class="footer-item"><i data-lucide="shield-check"></i> 안심정산</div>
           </div>
         </div>
-      `;
-    }).join('');
-    container.querySelectorAll('.gym-card').forEach(card => {
-      card.addEventListener('click', () => showGymDetail(card.getAttribute('data-id')));
-    });
-  });
-}
+      </div>
+    `).join('');
 
-/**
- * Show gym detail
- */
-async function showGymDetail(gymId) {
-  currentActiveGymId = gymId;
-  const container = document.getElementById('detail-content');
-  if (!container) return;
-  switchView('view-detail');
-  container.innerHTML = '<div class="loading-spinner">✨ 상세 정보를 불러오는 중...</div>';
-  try {
-    const gymDoc = await getDoc(doc(db, 'gyms', gymId));
-    if (!gymDoc.exists()) {
-      showToast('정보를 찾을 수 없습니다.', 'error');
-      switchView('view-home');
-      return;
-    }
-    const gym = gymDoc.data();
-    const trainersQuery = query(collection(db, 'trainers'), where('gymId', '==', gymId));
-    const trainersSnap = await getDocs(trainersQuery);
-    const trainers = trainersSnap.docs.map(d => d.data());
-    container.innerHTML = `
-      <div class="detail-hero" style="background-image: url('${gym.photoURL || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=600'}')"></div>
-      <div class="detail-info-main">
-        <h2 class="detail-name">${gym.name}</h2>
-        <div class="detail-meta">
-          <span class="status-badge status-${gym.status || 'safe'}">${gym.occupancy || '여유'}</span>
-          <span class="score">⭐ ${gym.rating || '0.0'}</span>
-        </div>
-        <p class="detail-desc">${gym.description || '준비 중입니다.'}</p>
-      </div>
-      <div class="detail-section">
-        <h3 class="detail-section-title">보유 기구</h3>
-        <div class="equipment-tags">
-          ${(gym.equipment || ['런닝머신', '파워랙']).map(item => `<span class="tag">${item}</span>`).join('')}
-        </div>
-      </div>
-      <div class="detail-section">
-        <h3 class="detail-section-title">소속 트레이너</h3>
-        <div class="trainer-list">
-          ${trainers.length > 0 ? trainers.map(t => `
-            <div class="trainer-card">
-              <div class="trainer-avatar" style="background-image: url('${t.photoURL || 'https://i.pravatar.cc/150?u=' + t.name}')"></div>
-              <div class="trainer-info"><h4>${t.name} 트레이너</h4><p>${t.specialty || 'PT'}</p></div>
-            </div>
-          `).join('') : '<p class="empty-text">등록된 트레이너가 없습니다.</p>'}
-        </div>
-      </div>
-      <div class="detail-actions" style="margin-top: 40px;">
-        <button class="btn-primary" onclick="window.openConsultationModal()">상담 신청하기</button>
-      </div>
-    `;
+    if (window.lucide) lucide.createIcons();
   } catch (error) {
-    showToast('에러가 발생했습니다.', 'error');
+    console.error('Gym List Error:', error);
+    container.innerHTML = `<div class="empty-state">정보 준비 중 (네트워크 확인 필요)</div>`;
   }
 }
 
 /**
- * Open Modal
+ * Trainers in Gym
  */
-function openConsultationModal() {
-  const modal = document.getElementById('modal-consultation');
-  if (modal) modal.classList.add('active');
+async function renderTrainersInGym(gymId) {
+  const container = document.getElementById('gym-trainer-list');
+  if (!container) return;
+
+  try {
+    console.log(`Fetching trainers for gym: ${gymId}`);
+    const q = query(collection(db, 'trainers'), where('gymId', '==', gymId));
+    const snapshot = await getDocs(q);
+    const filtered = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    console.log(`Fetched ${filtered.length} trainers for gym`);
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state">검증 전문가 등록 준비 중...</div>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(trainer => `
+      <div class="trainer-card" onclick="window.showTrainerDetail('${trainer.id}')">
+        <div class="trainer-photo" style="background-image: url('${trainer.photoUrl || trainer.photoURL}')"></div>
+        <div class="trainer-card-info">
+          <h3 class="trainer-name">${trainer.name} 트레이너</h3>
+          <div class="trainer-specialty">${trainer.specialty}</div>
+          <div class="trust-badge-row">
+            ${trainer.isEarlyVerified ? '<span class="trust-tag tag-early"><i data-lucide="gem"></i> Early Verified</span>' : ''}
+            <span class="trust-tag tag-verified"><i data-lucide="badge-check"></i> 자격인증</span>
+          </div>
+        </div>
+        <div class="trust-score-container">
+          <span class="trust-score-label">TRUST</span>
+          <span class="trust-score-value">${trainer.trustScore}</span>
+        </div>
+      </div>
+    `).join('');
+
+    if (window.lucide) lucide.createIcons();
+  } catch (error) {
+    console.error('Trainers Fetch Error:', error);
+    container.innerHTML = '<div class="empty-state">전문가 정보 준비 중...</div>';
+  }
 }
 
 /**
- * Toast
+ * Show Gym Detail
+ */
+async function showGymDetail(gymId) {
+  if (!gymId || gymId === 'undefined') {
+    console.error('Invalid gymId provided to showGymDetail');
+    showToast('유효하지 않은 센터 정보입니다.', 'error');
+    return;
+  }
+
+  const container = document.getElementById('gym-detail-content');
+  if (!container) return;
+
+  switchView('view-gym-detail');
+  window.scrollTo(0, 0);
+
+  container.innerHTML = '<div class="loading-spinner">✨ 센터 정보를 불러오는 중...</div>';
+
+  try {
+    console.log(`Fetching gym detail from Firestore for ID: ${gymId}`);
+    const gymRef = doc(db, 'gyms', gymId);
+    const gymDoc = await getDoc(gymRef);
+
+    if (!gymDoc.exists()) {
+      console.error(`Gym with ID ${gymId} not found in Firestore`);
+      throw new Error('센터 정보를 찾을 수 없습니다.');
+    }
+
+    const gym = gymDoc.data();
+    console.log('Successfully fetched gym detail:', gym.name);
+
+    container.innerHTML = `
+      <div class="detail-hero" style="background-image: url('${gym.imageUrl}')"></div>
+      <div class="detail-info-main">
+        <h2 class="detail-name">${gym.name}</h2>
+        <div class="gym-card-area" style="font-size: 16px; margin-top: 4px;">📍 ${gym.region}</div>
+        <p class="detail-desc" style="margin-top: 20px;">${gym.description || gym.desc || '센터 소개 준비 중입니다.'}</p>
+      </div>
+    `;
+
+    renderTrainersInGym(gymId);
+  } catch (error) {
+    console.error('Gym Detail Critical Error:', error);
+    container.innerHTML = `<div class="empty-state">상세 정보 준비 중입니다.</div>`;
+    showToast('정보 준비 중...', 'info');
+  }
+}
+
+/**
+ * Show Trainer Detail
+ */
+async function showTrainerDetail(trainerId) {
+  if (!trainerId || trainerId === 'undefined') {
+    showToast('유효하지 않은 전문가 정보입니다.', 'error');
+    return;
+  }
+
+  const container = document.getElementById('trainer-detail-content');
+  if (!container) return;
+
+  switchView('view-trainer-detail');
+  window.scrollTo(0, 0);
+
+  const backBtn = document.getElementById('btn-back-trainer');
+  if (backBtn) {
+    backBtn.onclick = () => window.switchView('view-home');
+  }
+
+  container.innerHTML = '<div class="loading-spinner">✨ 전문가 프로필을 불러오는 중...</div>';
+
+  try {
+    console.log(`Fetching trainer detail from Firestore for ID: ${trainerId}`);
+    const trainerDoc = await getDoc(doc(db, 'trainers', trainerId));
+    if (!trainerDoc.exists()) throw new Error('전문가 정보를 찾을 수 없습니다.');
+    const trainer = trainerDoc.data();
+
+    container.innerHTML = `
+      <div class="detail-hero" style="background-image: url('${trainer.photoUrl || trainer.photoURL || 'https://i.pravatar.cc/150?u=' + trainer.name}')"></div>
+      <div class="detail-info-main">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div>
+            <h2 class="detail-name">${trainer.name} 트레이너</h2>
+            <div class="trainer-specialty" style="font-size: 16px; margin-top: 4px;">${trainer.specialty || '퍼스널 트레이닝'}</div>
+          </div>
+          <div class="trust-score-container" style="position: static; padding: 10px 20px;">
+            <span class="trust-score-label">TRUST SCORE</span>
+            <span class="trust-score-value" style="font-size: 20px;">${trainer.trustScore || '9.0'}</span>
+          </div>
+        </div>
+        
+        <div class="trust-badge-row" style="margin-top: 16px; gap: 10px;">
+          <span class="trust-tag tag-verified" style="font-size: 12px; padding: 6px 12px;"><i data-lucide="badge-check"></i> 국가공인 자격 인증</span>
+          <span class="trust-tag tag-escrow" style="font-size: 12px; padding: 6px 12px;"><i data-lucide="shield-check"></i> 안심 정산 파트너</span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h3 class="detail-section-title">전문가 소개</h3>
+        <p class="detail-desc">${trainer.description || '반갑습니다. 회원님의 건강한 성장을 돕는 트레이너입니다.'}</p>
+      </div>
+
+      <div class="detail-section">
+        <h3 class="detail-section-title">안심 결제 프로세스</h3>
+        <div class="escrow-flow" style="margin-top: 16px;">
+          <div class="flow-step active"><i data-lucide="circle-check"></i> 1. 결제 완료 (에스크로 보관)</div>
+          <div class="flow-step"><i data-lucide="circle"></i> 2. PT 수업 진행 (체크인)</div>
+          <div class="flow-step"><i data-lucide="circle"></i> 3. 1회차 완료 (상호 확인)</div>
+          <div class="flow-step"><i data-lucide="circle"></i> 4. 대금 지급 (트레이너 정산)</div>
+        </div>
+      </div>
+
+      <div class="detail-actions" style="margin-top: 40px;">
+        <button class="btn-primary" onclick="window.openConsultationModal()">안심 상담 신청하기</button>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  } catch (error) {
+    console.error('Trainer Detail Error:', error);
+    showToast('전문가 정보를 불러오지 못했습니다.', 'error');
+  }
+}
+
+/**
+ * Early Verified Slider
+ */
+async function renderEarlyVerifiedTrainers() {
+  const container = document.getElementById('early-verified-scroll');
+  if (!container) return;
+
+  try {
+    const q = query(
+      collection(db, 'trainers'),
+      where('isEarlyVerified', '==', true),
+      limit(10)
+    );
+    const snapshot = await getDocs(q);
+    let trainers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    trainers.sort((a, b) => (b.trustScore || 0) - (a.trustScore || 0));
+
+    if (trainers.length === 0) {
+      container.innerHTML = '<div class="empty-state">최우수 전문가 매칭 준비 중...</div>';
+      return;
+    }
+
+    container.innerHTML = trainers.map(trainer => `
+      <div class="partner-slide" onclick="window.showTrainerDetail('${trainer.id}')">
+        <div class="partner-avatar" style="background-image: url('${trainer.photoUrl || trainer.photoURL || 'https://i.pravatar.cc/150?u=' + trainer.name}')"></div>
+        <div class="partner-info">
+          <h4>${trainer.name}</h4>
+          <p>${trainer.specialty}</p>
+        </div>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('Early Trainers Error:', error);
+  }
+}
+
+/**
+ * Admin Dashboard
+ */
+async function renderAdminDashboard() {
+  const container = document.getElementById('application-list');
+  const statTotal = document.getElementById('stat-total');
+  if (!container) return;
+
+  try {
+    const qUser = query(collection(db, 'applications'), orderBy('createdAt', 'desc'), limit(20));
+    const qPartner = query(collection(db, 'partner_applications'), orderBy('createdAt', 'desc'), limit(20));
+
+    const [userSnap, partnerSnap] = await Promise.all([getDocs(qUser), getDocs(qPartner)]);
+    const allApps = [
+      ...userSnap.docs.map(doc => ({ id: doc.id, category: 'consult', ...doc.data() })),
+      ...partnerSnap.docs.map(doc => ({ id: doc.id, category: 'partner', ...doc.data() }))
+    ].sort((a, b) => {
+      const dbA = a.createdAt?.seconds || 0;
+      const dbB = b.createdAt?.seconds || 0;
+      return dbB - dbA;
+    });
+
+    if (statTotal) statTotal.innerText = allApps.length;
+
+    container.innerHTML = allApps.map(app => {
+      const date = app.createdAt ? new Date(app.createdAt.seconds * 1000).toLocaleString('ko-KR') : '방금 전';
+      const isPartner = app.category === 'partner';
+      return `
+        <div class="app-card ${isPartner ? 'card-partner' : ''}">
+          <div class="app-info">
+             <div class="app-header-row">
+               <div class="app-user">${app.name || app.userName || '익명'}</div>
+               <span class="badge-${isPartner ? (app.type || 'gym') : 'consult'}">${isPartner ? '가맹신청' : '상담신청'}</span>
+             </div>
+             <div class="app-gym">📍 ${isPartner ? app.area : app.gymId}</div>
+             <div class="app-time">${date}</div>
+          </div>
+          <a href="tel:${app.phone || app.userPhone}" class="app-phone-btn">📞</a>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('Admin Error:', error);
+    container.innerHTML = `<div class="empty-state">데이터 로드 실패: ${error.message}</div>`;
+  }
+}
+
+/**
+ * Helpers
  */
 function showToast(message, type = 'success') {
   const container = document.getElementById('toast-container');
   if (!container) return;
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `<span>${message}</span>`;
+  toast.innerText = message;
   container.appendChild(toast);
   setTimeout(() => {
     toast.style.opacity = '0';
@@ -270,7 +468,67 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
 
-window.showToast = showToast;
+function openConsultationModal(gymId) {
+  currentActiveGymId = gymId;
+  const modal = document.getElementById('modal-consultation');
+  if (modal) modal.classList.add('active');
+}
+
+function openPartnerModal(type) {
+  const modal = document.getElementById('modal-partner');
+  const typeInput = document.getElementById('partner-type');
+  const title = document.getElementById('partner-modal-title');
+  if (modal && typeInput && title) {
+    typeInput.value = type;
+    title.innerText = type === 'gym' ? '참여 센터 가맹 신청' : '검증 트레이너 등록 신청';
+    modal.classList.add('active');
+  }
+}
+
+async function handlePartnerSubmit(e) {
+  e.preventDefault();
+  const submitBtn = document.getElementById('btn-submit-partner');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = '제출 중...'; }
+
+  try {
+    await addDoc(collection(db, 'partner_applications'), {
+      type: document.getElementById('partner-type').value,
+      name: document.getElementById('partner-name').value,
+      phone: document.getElementById('partner-phone').value,
+      area: document.getElementById('partner-area').value,
+      message: document.getElementById('partner-msg').value,
+      feedback: document.getElementById('partner-feedback').value,
+      createdAt: serverTimestamp()
+    });
+    showToast('🎉 가맹 신청이 완료되었습니다!', 'success');
+    document.getElementById('modal-partner').classList.remove('active');
+    e.target.reset();
+  } catch (error) {
+    showToast(`제출 실패: ${error.message}`, 'error');
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = '가맹 신청서 제출'; }
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const partnerForm = document.getElementById('form-partner');
+  if (partnerForm) partnerForm.addEventListener('submit', handlePartnerSubmit);
+});
+
+function selectRegion(regionId) {
+  if (regionId === 'daegu') {
+    showToast('📍 대구 파일럿 지역으로 입장합니다.', 'success');
+    switchView('view-home');
+    const headline = document.querySelector('.main-headline');
+    if (headline) headline.innerText = '대구 검증 전문가 찾기';
+  }
+}
+
+window.showTrainerDetail = showTrainerDetail;
 window.showGymDetail = showGymDetail;
 window.openConsultationModal = openConsultationModal;
-console.log('GymNow MVP Script v1.5 Loaded');
+window.selectRegion = selectRegion;
+window.switchView = switchView;
+window.openPartnerModal = openPartnerModal;
+
+console.log('GymNow v2.8 Online');

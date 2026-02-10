@@ -14,19 +14,28 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
     rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=1.3">
+  <link rel="stylesheet" href="style.css?v=3.2">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
   <div class="app-container">
+    <!-- Example Data Notice Banner -->
+    <div class="example-notice-banner">
+      <i data-lucide="info"></i>
+      <span>현재 표시되는 정보는 파일럿 테스트용 예시 데이터입니다.</span>
+    </div>
 
     <!-- View: Intro -->
     <section id="view-intro" class="view active">
       <div class="intro-content">
         <header class="hero-section">
-          <div class="logo-animation">💪</div>
+          <div class="logo-animation">
+            <i data-lucide="building-2" style="width: 60px; height: 60px; color: var(--primary);"></i>
+          </div>
           <h1 class="main-title">GymNow</h1>
-          <p class="tagline">정교하게 설계된<br>커뮤니티 헬스 라이프</p>
+          <p class="tagline">대한민국 피트니스<br>신뢰·거래 표준 인프라</p>
         </header>
 
         <div class="action-footer">
@@ -36,14 +45,86 @@
       </div>
     </section>
 
-    <!-- View: Search (Home) -->
-    <section id="view-home" class="view">
-      <!-- Search focus -->
-      <div class="search-header">
-        <h2 class="section-title">주변 헬스장</h2>
-        <div class="search-input-wrapper">
-          <input type="text" id="gym-search" placeholder="이름으로 검색..." />
+    <!-- View: Region Select (Mobile Pilot Gateway) -->
+    <section id="view-region-select" class="view">
+      <div class="view-header-back">
+        <button onclick="window.switchView('view-intro')" class="btn-back-mini"><i
+            data-lucide="chevron-left"></i></button>
+      </div>
+      <div class="region-select-content">
+        <header class="region-header">
+          <p class="region-pilot-label">PILOT SERVICE · 제한된 지역 운영 중</p>
+          <h2 class="region-title">지역 선택</h2>
+        </header>
+
+        <div class="region-card-container">
+          <!-- Main Action: Daegu -->
+          <div class="region-feature-card active">
+            <div class="card-region-info">
+              <span class="pilot-badge-mini">운영 중</span>
+              <h3 class="region-name-main">대구광역시</h3>
+              <p class="region-desc-short">현재 모든 검증 전문가와<br>참여 센터를 이용할 수 있습니다.</p>
+            </div>
+            <button class="btn-region-start" onclick="window.selectRegion('daegu')">대구에서 시작하기</button>
+          </div>
+
+          <!-- Coming Soon: Others -->
+          <div class="region-list-secondary">
+            <div class="region-item-mini disabled">
+              <span class="region-name-small">서울특별시</span>
+              <span class="region-status-badge">준비 중</span>
+            </div>
+            <div class="region-item-mini disabled">
+              <span class="region-name-small">부산광역시</span>
+              <span class="region-status-badge">준비 중</span>
+            </div>
+          </div>
         </div>
+
+        <p class="region-footer-msg">“GymNow는 한 지역의 완벽함을 먼저 검증합니다.”</p>
+      </div>
+    </section>
+
+    <!-- View: Search (Home - Gym Focus) -->
+    <section id="view-home" class="view">
+      <div class="view-header-back">
+        <button onclick="window.switchView('view-region-select')" class="btn-back-mini"><i
+            data-lucide="chevron-left"></i></button>
+      </div>
+      <!-- High-impact Headline -->
+      <div class="search-header">
+        <div id="recruitment-banner" class="recruitment-banner">대구 파일럿 참여 센터 (0/5)</div>
+        <h2 class="main-headline">대구 검증 헬스장 찾기</h2>
+        <p class="sub-headline">GymNow가 보증하는 표준 시설 및 안심 거래 센터</p>
+        <div class="search-input-wrapper">
+          <input type="text" id="gym-search" placeholder="지역(동네) 또는 센터 이름 검색..." />
+        </div>
+
+        <!-- 🤝 Partner Recruitment CTA -->
+        <div class="partner-cta-row">
+          <button class="btn-partner-mini" onclick="window.openPartnerModal('gym')">
+            <i data-lucide="building-2"></i> 참여 센터 신청
+          </button>
+          <button class="btn-partner-mini" onclick="window.openPartnerModal('trainer')">
+            <i data-lucide="award"></i> 검증 트레이너 신청
+          </button>
+        </div>
+      </div>
+
+      <!-- 💎 Early Verified Partners (Horizontal Slider) -->
+      <section class="early-verified-section">
+        <div class="section-header-flex">
+          <h3 class="section-subtitle">💎 Early Verified 파트너</h3>
+          <button class="btn-text-link" onclick="window.openBenefitsModal()">혜택 보기</button>
+        </div>
+        <div id="early-verified-scroll" class="horizontal-scroll">
+          <!-- Rendered by JS -->
+          <div class="loading-spinner">최우수 전문가 로드 중...</div>
+        </div>
+      </section>
+
+      <div class="list-divider">
+        <h3 class="section-subtitle">참여 센터 리스트</h3>
       </div>
 
       <div id="gym-list" class="gym-grid">
@@ -51,10 +132,61 @@
       </div>
     </section>
 
+    <!-- View: Gym Detail -->
+    <section id="view-gym-detail" class="view">
+      <div class="detail-header">
+        <button onclick="window.switchView('view-home')" class="btn-back">← 돌아가기</button>
+      </div>
+      <div id="gym-detail-content" class="detail-container">
+        <!-- Gym info will be injected here -->
+      </div>
+
+      <div class="gym-trainers-section">
+        <h3 class="section-subtitle" style="padding: 0 20px;">이 센터의 검증 트레이너</h3>
+        <div id="gym-trainer-list" class="trainer-grid" style="padding-top: 12px;">
+          <!-- Trainers belonging to this gym will be injected here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- View: Trainer Detail (Renamed for clarity) -->
+    <section id="view-trainer-detail" class="view">
+      <div class="detail-header">
+        <button id="btn-back-trainer" class="btn-back">← 돌아가기</button>
+      </div>
+
+      <div id="trainer-detail-content" class="detail-container">
+        <!-- Content will be injected here -->
+      </div>
+    </section>
+    <section id="view-admin" class="view">
+      <header class="view-header">
+        <h1 class="view-title">매니저 대시보드</h1>
+        <p class="view-subtitle">실시간 상담 신청 현황</p>
+      </header>
+
+      <div id="admin-stats" class="admin-stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">누적 신청</span>
+          <span id="stat-total" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">대기 중</span>
+          <span id="stat-pending" class="stat-value">0</span>
+        </div>
+      </div>
+
+      <div id="application-list" class="application-list">
+        <div class="loading-spinner">📥 데이터를 불러오는 중...</div>
+      </div>
+    </section>
+
     <!-- View: Profile -->
     <section id="view-profile" class="view">
       <div class="profile-header">
-        <div class="avatar-circle">👤</div>
+        <div class="avatar-circle">
+          <i data-lucide="user" style="width: 40px; height: 40px;"></i>
+        </div>
         <h2 class="user-name">게스트 사용자</h2>
         <p class="user-email">guest@gymnow.com</p>
       </div>
@@ -75,54 +207,160 @@
       </div>
     </section>
 
-    <!-- View: Detail -->
-    <section id="view-detail" class="view">
-      <div class="detail-header">
-        <button id="btn-back" class="btn-back">← 돌아가기</button>
-      </div>
-
-      <div id="detail-content" class="detail-container">
-        <!-- Content will be injected here -->
-      </div>
-    </section>
+    <!-- (Removed old direct detail view) -->
 
     <!-- Navigation -->
     <nav class="bottom-nav">
-      <button class="nav-btn active" data-target="view-home">
-        <span class="icon">🏠</span>
+      <button class="nav-btn active" data-target="view-intro">
+        <span class="icon"><i data-lucide="home"></i></span>
         <span class="label">홈</span>
       </button>
       <button class="nav-btn" data-target="view-profile">
-        <span class="icon">👤</span>
+        <span class="icon"><i data-lucide="user"></i></span>
         <span class="label">내 정보</span>
       </button>
     </nav>
 
-    <!-- Consultation Modal -->
-    <div id="modal-consultation" class="modal">
+    <!-- Refund Calculator Modal -->
+    <div id="modal-refund" class="modal">
       <div class="modal-content">
-        <button class="modal-close">&times;</button>
-        <h2 class="modal-title">프리미엄 상담 신청</h2>
-        <p class="modal-subtitle">전문 상담원이 곧 연락을 드릴 예정입니다.</p>
+        <button class="modal-close"
+          onclick="document.getElementById('modal-refund').classList.remove('active')">&times;</button>
+        <h2 class="modal-title">표준 환불금 계산기</h2>
+        <p class="modal-subtitle">공정거래위원회 표준약관(체력단련업) 기준</p>
 
-        <form id="form-consultation" class="consult-form">
+        <div class="refund-form">
           <div class="form-group">
-            <label for="user-name">성함</label>
-            <input type="text" id="user-name" placeholder="홍길동" required />
+            <label>총 계약 금액 (원)</label>
+            <input type="number" id="refund-total-price" placeholder="1000000" />
           </div>
           <div class="form-group">
-            <label for="user-phone">연락처</label>
-            <input type="tel" id="user-phone" placeholder="010-1234-5678" required />
+            <label>총 계약 회차 (회)</label>
+            <input type="number" id="refund-total-sessions" placeholder="10" />
           </div>
-          <button type="submit" class="btn-primary full-width" id="btn-submit-consult">지금 신청하기</button>
-        </form>
+          <div class="form-group">
+            <label>남은 수업 회차 (회)</label>
+            <input type="number" id="refund-remaining-sessions" placeholder="5" />
+          </div>
+          <button class="btn-primary full-width" onclick="window.calculateRefund()">예상 환불액 계산하기</button>
+        </div>
+
+        <div id="refund-result" class="refund-result" style="display: none;">
+          <div class="result-item">
+            <span>위약금 (10%)</span>
+            <span id="res-penalty">0원</span>
+          </div>
+          <div class="result-item highlight">
+            <span>최종 환불 예상액</span>
+            <span id="res-final">0원</span>
+          </div>
+          <p class="result-note">* 실제 환불액은 센터별 계약 조건에 따라 다를 수 있습니다.</p>
+        </div>
       </div>
+      <!-- Benefits Modal (New) -->
+      <div id="modal-benefits" class="modal">
+        <div class="modal-content">
+          <button class="modal-close"
+            onclick="document.getElementById('modal-benefits').classList.remove('active')">&times;</button>
+          <h2 class="modal-title">Early Verified 파트너 혜택</h2>
+          <p class="modal-subtitle">초기 10인에게만 주어지는 독보적 권한</p>
+
+          <div class="benefits-list">
+            <div class="benefit-item">
+              <i data-lucide="zap" class="benefit-icon"></i>
+              <div class="benefit-text">
+                <h4>전체 리스트 최상단 고정</h4>
+                <p>모든 검색 결과에서 일반 트레이너보다 우선 노출됩니다.</p>
+              </div>
+            </div>
+            <div class="benefit-item">
+              <i data-lucide="percent" class="benefit-icon"></i>
+              <div class="benefit-text">
+                <h4>중개 수수료 평생 면제</h4>
+                <p>추후 유료화 시에도 초기 파트너는 평생 수수료가 0원입니다.</p>
+              </div>
+            </div>
+            <div class="benefit-item">
+              <i data-lucide="award" class="benefit-icon"></i>
+              <div class="benefit-text">
+                <h4>인프라 표준 자문단 위촉</h4>
+                <p>GymNow의 표준 프로세스 수립에 자문단으로 참여합니다.</p>
+              </div>
+            </div>
+          </div>
+          <button class="btn-primary full-width"
+            onclick="document.getElementById('modal-benefits').classList.remove('active')">확인했습니다</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consultation Modal -->
+  <div id="modal-consultation" class="modal">
+    <div class="modal-content">
+      <button class="modal-close"
+        onclick="document.getElementById('modal-consultation').classList.remove('active')">&times;</button>
+      <h2 class="modal-title">전문가 안심 상담 신청</h2>
+      <p class="modal-subtitle">GymNow 표준 프로세스에 따라 보호받는 상담입니다.</p>
+
+      <form id="form-consultation" class="consult-form">
+        <div class="form-priority-notice">
+          <i data-lucide="zap"></i> Early Verified 파트너에게 우선 매칭됩니다.
+        </div>
+        <div class="form-group">
+          <label for="user-name">성함</label>
+          <input type="text" id="user-name" placeholder="홍길동" required />
+        </div>
+        <div class="form-group">
+          <label for="user-phone">연락처</label>
+          <input type="tel" id="user-phone" placeholder="010-1234-5678" required />
+        </div>
+        <div class="form-trust-guide">
+          상담 신청 후 GymNow 기준으로 검증된<br>트레이너 또는 센터 담당자가 연락드립니다.
+        </div>
+        <button type="submit" class="btn-primary full-width" id="btn-submit-consult">상담 신청 (에스크로 보호)</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Partner Application Modal (New) -->
+  <div id="modal-partner" class="modal">
+    <div class="modal-content">
+      <button class="modal-close"
+        onclick="document.getElementById('modal-partner').classList.remove('active')">&times;</button>
+      <h2 id="partner-modal-title" class="modal-title">가맹 신청하기</h2>
+      <p class="modal-subtitle">GymNow와 함께 피트니스 표준을 만듭니다.</p>
+
+      <form id="form-partner" class="consult-form">
+        <input type="hidden" id="partner-type" value="gym" />
+        <div class="form-group">
+          <label for="partner-name">이름 / 센터명</label>
+          <input type="text" id="partner-name" placeholder="홍길동 (또는 센터명)" required />
+        </div>
+        <div class="form-group">
+          <label for="partner-phone">연락처</label>
+          <input type="tel" id="partner-phone" placeholder="010-1234-5678" required />
+        </div>
+        <div class="form-group">
+          <label for="partner-area">운영 / 활동 지역</label>
+          <input type="text" id="partner-area" placeholder="대구 수성구 등" required />
+        </div>
+        <div class="form-group">
+          <label for="partner-msg">간단한 소개 (선택)</label>
+          <input type="text" id="partner-msg" placeholder="검증 서비스에 관심있습니다." />
+        </div>
+        <div class="form-group">
+          <label for="partner-feedback">서비스 아이디어 피드백 (선택)</label>
+          <textarea id="partner-feedback" placeholder="GymNow의 아이디어에 대한 소중한 의견을 들려주세요." rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn-primary full-width" id="btn-submit-partner">가맹 신청서 제출</button>
+      </form>
     </div>
   </div>
 
   <div id="toast-container" class="toast-container"></div>
 
-  <script type="module" src="script.js?v=1.5"></script>
+  <script type="module" src="script.js?v=3.1"></script>
 </body>
 
 </html>
