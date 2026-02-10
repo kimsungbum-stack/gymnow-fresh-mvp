@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
     rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=3.6">
+  <link rel="stylesheet" href="style.css?v=3.7">
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Cache Control for KakaoTalk -->
@@ -33,6 +33,18 @@
 
 <body>
   <div class="app-container">
+    <!-- View: Splash Screen (Priority) -->
+    <section id="view-splash" class="view-splash active">
+      <div class="splash-content">
+        <div class="splash-logo">
+          <i data-lucide="building-2"></i>
+        </div>
+        <h1 class="splash-title">GymNow</h1>
+        <p class="splash-subtitle">Standard of Fitness</p>
+        <div class="splash-loader"></div>
+      </div>
+    </section>
+
     <!-- Example Data Notice Banner -->
     <div class="example-notice-banner">
       <i data-lucide="info"></i>
@@ -372,7 +384,7 @@
 
   <div id="toast-container" class="toast-container"></div>
 
-  <script type="module" src="script.js?v=3.6"></script>
+  <script type="module" src="script.js?v=3.7"></script>
 </body>
 
 </html>

@@ -10,7 +10,7 @@ import {
   db, collection, onSnapshot, query, orderBy,
   getDoc, doc, getDocs, where, addDoc,
   serverTimestamp, limit, signInWithPopup
-} from './firebase-config.js?v=3.6';
+} from './firebase-config.js?v=3.7';
 
 // Global error handling
 window.addEventListener('error', (e) => {
@@ -30,6 +30,19 @@ function init() {
   initModalEvents();
   if (window.lucide) {
     lucide.createIcons();
+  }
+
+  // High-End Splash Screen Flow
+  const splash = document.getElementById('view-splash');
+  if (splash) {
+    setTimeout(() => {
+      splash.style.opacity = '0';
+      setTimeout(() => {
+        splash.classList.remove('active');
+        // If first visit, show intro. If not, maybe home (can be expanded later)
+        switchView('view-intro');
+      }, 1000); // Wait for fade transition
+    }, 2000); // Visible for 2 seconds
   }
 }
 
