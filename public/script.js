@@ -10,7 +10,7 @@ import {
   db, collection, onSnapshot, query, orderBy,
   getDoc, doc, getDocs, where, addDoc,
   serverTimestamp, limit, signInWithPopup
-} from './firebase-config.js?v=3.5';
+} from './firebase-config.js?v=3.6';
 
 // Global error handling
 window.addEventListener('error', (e) => {
@@ -542,4 +542,13 @@ window.selectRegion = selectRegion;
 window.switchView = switchView;
 window.openPartnerModal = openPartnerModal;
 
-console.log('GymNow v3.5 Online 🚀');
+console.log('GymNow v3.6 (PWA) Online 🚀');
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log('SW: Registered', reg))
+      .catch(err => console.log('SW: Failed', err));
+  });
+}
