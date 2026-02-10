@@ -492,8 +492,14 @@ a {
   border-top: 1px solid var(--glass-border);
   z-index: 100;
   display: none;
-  /* Hidden by default, shown via .nav-visible */
+  /* Control via .nav-visible */
+  justify-content: space-around;
+  align-items: center;
   box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.03);
+}
+
+.bottom-nav.nav-visible {
+  display: flex !important;
 }
 
 .bottom-nav.nav-visible {

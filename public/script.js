@@ -142,6 +142,12 @@ function switchView(viewId) {
   window.scrollTo(0, 0);
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
 
+  if (viewId === 'view-home') {
+    renderEarlyVerifiedTrainers();
+    renderGymList();
+  }
+  if (viewId === 'view-admin') renderAdminDashboard();
+
   // Bottom Navigation Visibility Control
   const bottomNav = document.querySelector('.bottom-nav');
   if (bottomNav) {
