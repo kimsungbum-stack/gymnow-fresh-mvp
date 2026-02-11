@@ -1,32 +1,33 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Gyms & Trainers: 누구나 읽기 가능
+    // Public read for discovery data
     match /gyms/{document=**} {
       allow read: if true;
-      allow write: if false; // 관리자 도구로만 업데이트
+      allow write: if false;
     }
+
     match /trainers/{document=**} {
       allow read: if true;
       allow write: if false;
     }
-    
-    // Applications (상담 신청): 누구나 생성 가능, 테스트를 위해 현재는 읽기 허용
+
+    // User submissions: allow create, block public reads
     match /applications/{docId} {
       allow create: if true;
-      allow read: if true; 
+      allow read: if false;
     }
 
-    // Checkins: 인증된 사용자만 생성 가능
+    // Authenticated check-in creation only
     match /checkins/{docId} {
       allow create: if request.auth != null;
-      allow read: if true; 
+      allow read: if true;
     }
 
-    // Partner Applications (새로 추가)
+    // Partner submissions: allow create, block public reads
     match /partner_applications/{docId} {
       allow create: if true;
-      allow read: if true; // 운영자 확인용
+      allow read: if false;
     }
   }
 }
