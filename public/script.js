@@ -93,7 +93,7 @@ function initDetailEvents() {
 
 function initModalEvents() {
   const modal = document.getElementById('modal-consultation');
-  const closeBtn = document.querySelector('.modal-close');
+  const closeBtn = modal ? modal.querySelector('.modal-close') : null;
   const form = document.getElementById('form-consultation');
 
   if (closeBtn && modal) {
@@ -156,8 +156,12 @@ function switchView(viewId) {
   setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
 
   if (viewId === 'view-home') {
-    renderEarlyVerifiedTrainers();
-    renderGymList();
+    renderEarlyVerifiedTrainers().catch((error) => {
+      handleHomeRenderCrash('early-verified-scroll', '최우수 전문가', error);
+    });
+    renderGymList().catch((error) => {
+      handleHomeRenderCrash('gym-list', '참여 센터', error);
+    });
   }
   if (viewId === 'view-admin') renderAdminDashboard();
 
@@ -179,8 +183,8 @@ function switchView(viewId) {
 async function renderGymList() {
   const container = document.getElementById('gym-list');
   if (!container) return;
-
-  container.innerHTML = '<div class="loading-spinner">🏙️ 대구 참여 센터 로딩 중...</div>';
+  renderHomeLoadingState(container, '🏙️ 대구 참여 센터 로딩 중...');
+  const timeoutId = startHomeLoadTimeout(container, '참여 센터');
 
   try {
     console.log('Fetching gyms from Firestore...');
@@ -190,7 +194,7 @@ async function renderGymList() {
     console.log(`Fetched ${gyms.length} gyms`);
 
     if (gyms.length === 0) {
-      container.innerHTML = '<div class="empty-state">대구 지역 참여 센터 정보 준비 중...</div>';
+      renderHomeEmptyState(container, '대구 지역 참여 센터 정보 준비 중...');
       return;
     }
 
@@ -217,11 +221,18 @@ async function renderGymList() {
         </div>
       </div>
     `).join('');
+    markHomeLoadResolved(container);
 
     if (window.lucide) lucide.createIcons();
   } catch (error) {
     console.error('Gym List Error:', error);
-    container.innerHTML = `<div class="empty-state">정보 준비 중 (네트워크 확인 필요)</div>`;
+    const alreadyTimedOut = container.dataset.loadState === 'error' && container.dataset.loadSource === 'timeout';
+    renderHomeErrorState(container, getHomeLoadErrorMessage(error), 'fetch');
+    if (!alreadyTimedOut) {
+      safeShowToast('데이터 로드 실패: 참여 센터를 불러오지 못했습니다.', 'error');
+    }
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -281,6 +292,7 @@ async function showGymDetail(gymId) {
 
   const container = document.getElementById('gym-detail-content');
   if (!container) return;
+  currentActiveGymId = gymId;
 
   switchView('view-gym-detail');
   window.scrollTo(0, 0);
@@ -381,7 +393,7 @@ async function showTrainerDetail(trainerId) {
       </div>
 
       <div class="detail-actions" style="margin-top: 40px;">
-        <button class="btn-primary" onclick="window.openConsultationModal()">안심 상담 신청하기</button>
+        <button class="btn-primary" onclick="window.openConsultationModal('${trainer.gymId || ''}')">안심 상담 신청하기</button>
       </div>
     `;
 
@@ -398,6 +410,8 @@ async function showTrainerDetail(trainerId) {
 async function renderEarlyVerifiedTrainers() {
   const container = document.getElementById('early-verified-scroll');
   if (!container) return;
+  renderHomeLoadingState(container, '최우수 전문가 로드 중...');
+  const timeoutId = startHomeLoadTimeout(container, '최우수 전문가');
 
   try {
     const q = query(
@@ -411,7 +425,7 @@ async function renderEarlyVerifiedTrainers() {
     trainers.sort((a, b) => (b.trustScore || 0) - (a.trustScore || 0));
 
     if (trainers.length === 0) {
-      container.innerHTML = '<div class="empty-state">최우수 전문가 매칭 준비 중...</div>';
+      renderHomeEmptyState(container, '최우수 전문가 매칭 준비 중...');
       return;
     }
 
@@ -424,8 +438,16 @@ async function renderEarlyVerifiedTrainers() {
         </div>
       </div>
     `).join('');
+    markHomeLoadResolved(container);
   } catch (error) {
     console.error('Early Trainers Error:', error);
+    const alreadyTimedOut = container.dataset.loadState === 'error' && container.dataset.loadSource === 'timeout';
+    renderHomeErrorState(container, getHomeLoadErrorMessage(error), 'fetch');
+    if (!alreadyTimedOut) {
+      safeShowToast('데이터 로드 실패: 최우수 전문가를 불러오지 못했습니다.', 'error');
+    }
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -492,10 +514,121 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
 
+function safeShowToast(message, type = 'info') {
+  if (typeof showToast === 'function') {
+    showToast(message, type);
+  }
+}
+
+function renderHomeLoadingState(container, message) {
+  if (!container) return;
+  container.dataset.loadState = 'loading';
+  container.dataset.loadSource = 'initial';
+  container.innerHTML = `<div class="loading-spinner">${message}</div>`;
+}
+
+function renderHomeEmptyState(container, message) {
+  if (!container) return;
+  container.dataset.loadState = 'empty';
+  container.dataset.loadSource = 'fetch';
+  container.innerHTML = `<div class="empty-state">${message}</div>`;
+}
+
+function renderHomeErrorState(container, reason, source = 'fetch') {
+  if (!container) return;
+  container.dataset.loadState = 'error';
+  container.dataset.loadSource = source;
+  container.innerHTML = `
+    <div class="empty-state">
+      <div style="font-weight: 700;">데이터 로드 실패</div>
+      <div style="margin-top: 8px;">${reason}</div>
+      <button class="btn-primary" style="margin-top: 14px;" onclick="window.switchView('view-home')">새로고침</button>
+    </div>
+  `;
+}
+
+function markHomeLoadResolved(container) {
+  if (!container) return;
+  container.dataset.loadState = 'ready';
+  container.dataset.loadSource = 'fetch';
+}
+
+function getHomeLoadErrorMessage(error) {
+  const code = String(error?.code || '').toLowerCase();
+  const message = String(error?.message || '').toLowerCase();
+
+  if (code.includes('permission-denied') || message.includes('permission')) {
+    return '접근 권한이 없어 데이터를 가져오지 못했습니다.';
+  }
+  if (code.includes('unavailable') || code.includes('network') || message.includes('offline') || message.includes('network')) {
+    return '네트워크 연결을 확인한 뒤 다시 시도해주세요.';
+  }
+  return '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+}
+
+function startHomeLoadTimeout(container, sectionName) {
+  return window.setTimeout(() => {
+    if (!container || container.dataset.loadState !== 'loading') return;
+    renderHomeErrorState(
+      container,
+      `${sectionName} 데이터 응답이 지연되고 있습니다. 새로고침으로 다시 시도해주세요.`,
+      'timeout'
+    );
+    safeShowToast(`${sectionName} 데이터 로드가 지연되고 있습니다.`, 'error');
+  }, 5000);
+}
+
+function handleHomeRenderCrash(containerId, sectionName, error) {
+  console.error(`${sectionName} Render Crash:`, error);
+  const container = document.getElementById(containerId);
+  renderHomeErrorState(container, getHomeLoadErrorMessage(error), 'render');
+  safeShowToast(`데이터 로드 실패: ${sectionName} 화면을 구성하지 못했습니다.`, 'error');
+}
+
 function openConsultationModal(gymId) {
-  currentActiveGymId = gymId;
+  if (gymId) currentActiveGymId = gymId;
   const modal = document.getElementById('modal-consultation');
   if (modal) modal.classList.add('active');
+}
+
+function openBenefitsModal() {
+  const modal = document.getElementById('modal-benefits');
+  if (modal) modal.classList.add('active');
+}
+
+function openRefundModal() {
+  const modal = document.getElementById('modal-refund');
+  if (modal) modal.classList.add('active');
+}
+
+function calculateRefund() {
+  const totalPrice = Number(document.getElementById('refund-total-price')?.value || 0);
+  const totalSessions = Number(document.getElementById('refund-total-sessions')?.value || 0);
+  const remainingSessions = Number(document.getElementById('refund-remaining-sessions')?.value || 0);
+
+  if (!totalPrice || !totalSessions || remainingSessions < 0) {
+    showToast('환불 계산 값을 정확히 입력해주세요.', 'error');
+    return;
+  }
+
+  if (remainingSessions > totalSessions) {
+    showToast('남은 회차는 총 회차보다 클 수 없습니다.', 'error');
+    return;
+  }
+
+  const perSession = totalPrice / totalSessions;
+  const refundableAmount = Math.max(0, perSession * remainingSessions);
+  const penalty = Math.floor(refundableAmount * 0.1);
+  const finalRefund = Math.floor(Math.max(0, refundableAmount - penalty));
+
+  const result = document.getElementById('refund-result');
+  const penaltyEl = document.getElementById('res-penalty');
+  const finalEl = document.getElementById('res-final');
+  if (!result || !penaltyEl || !finalEl) return;
+
+  penaltyEl.innerText = `${penalty.toLocaleString('ko-KR')}원`;
+  finalEl.innerText = `${finalRefund.toLocaleString('ko-KR')}원`;
+  result.style.display = 'block';
 }
 
 function openPartnerModal(type) {
@@ -551,9 +684,13 @@ function selectRegion(regionId) {
 window.showTrainerDetail = showTrainerDetail;
 window.showGymDetail = showGymDetail;
 window.openConsultationModal = openConsultationModal;
+window.openBenefitsModal = openBenefitsModal;
+window.openRefundModal = openRefundModal;
+window.calculateRefund = calculateRefund;
 window.selectRegion = selectRegion;
 window.switchView = switchView;
 window.openPartnerModal = openPartnerModal;
+window.showToast = showToast;
 
 console.log('GymNow v3.6 (PWA) Online 🚀');
 
