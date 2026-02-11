@@ -235,11 +235,15 @@
 
     <!-- Navigation -->
     <nav class="bottom-nav">
-      <button class="nav-btn active" data-target="view-intro">
+      <button id="nav-intro" type="button" class="nav-btn active" data-target="view-intro" aria-label="홈 소개">
         <span class="icon"><i data-lucide="home"></i></span>
         <span class="label">홈</span>
       </button>
-      <button class="nav-btn" data-target="view-profile">
+      <button id="nav-home" type="button" class="nav-btn" data-target="view-home" aria-label="찾기">
+        <span class="icon"><i data-lucide="search"></i></span>
+        <span class="label">찾기</span>
+      </button>
+      <button id="nav-profile" type="button" class="nav-btn" data-target="view-profile" aria-label="내 정보">
         <span class="icon"><i data-lucide="user"></i></span>
         <span class="label">내 정보</span>
       </button>

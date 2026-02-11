@@ -65,8 +65,6 @@ function initNavigation() {
     btn.addEventListener('click', () => {
       const target = btn.getAttribute('data-target');
       switchView(target);
-      navButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
     });
   });
 
@@ -82,11 +80,6 @@ function initDetailEvents() {
   if (backBtn) {
     backBtn.addEventListener('click', () => {
       switchView('view-home');
-      const homeNav = document.querySelector('.nav-btn[data-target="view-home"]');
-      if (homeNav) {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        homeNav.classList.add('active');
-      }
     });
   }
 }
@@ -164,6 +157,23 @@ function switchView(viewId) {
     });
   }
   if (viewId === 'view-admin') renderAdminDashboard();
+
+  // Single source of truth for nav active state
+  const navButtons = document.querySelectorAll('.nav-btn');
+  navButtons.forEach((btn) => btn.classList.remove('active'));
+  const navTargetByView = {
+    'view-intro': 'view-intro',
+    'view-home': 'view-home',
+    'view-gym-detail': 'view-home',
+    'view-trainer-detail': 'view-home',
+    'view-profile': 'view-profile',
+    'view-admin': 'view-profile'
+  };
+  const navTarget = navTargetByView[viewId];
+  if (navTarget) {
+    const activeBtn = document.querySelector(`.nav-btn[data-target="${navTarget}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+  }
 
   // Bottom Navigation Visibility Control
   const bottomNav = document.querySelector('.bottom-nav');
