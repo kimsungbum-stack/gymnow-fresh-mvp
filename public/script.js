@@ -264,14 +264,26 @@ async function renderTrainersInGym(gymId) {
     const q = query(collection(db, 'trainers'), where('gymId', '==', gymId));
     const snapshot = await getDocs(q);
     const filtered = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    console.log(`Fetched ${filtered.length} trainers for gym`);
+    const sorted = filtered
+      .map((trainer) => ({ ...trainer, trustMeta: getTrustScoreMeta(trainer.trustScore) }))
+      .sort((a, b) => {
+        if (a.trustMeta.hasScore !== b.trustMeta.hasScore) return a.trustMeta.hasScore ? -1 : 1;
+        if (!a.trustMeta.hasScore) return 0;
+        return b.trustMeta.score - a.trustMeta.score;
+      });
+    console.log(`Fetched ${sorted.length} trainers for gym`);
+    console.log('Trainer sort order:', sorted.map(t => `${t.name}:${t.trustMeta.hasScore ? t.trustMeta.score : '준비중'}`).join(', '));
 
-    if (filtered.length === 0) {
+    if (sorted.length === 0) {
       container.innerHTML = '<div class="empty-state">검증 전문가 등록 준비 중...</div>';
       return;
     }
 
-    container.innerHTML = filtered.map(trainer => `
+    container.innerHTML = `
+      <div class="gym-card-area" style="font-size: 12px; margin-bottom: 8px; padding: 0 4px;">
+        정렬: Trust Score 높은 순 (대구 기준)
+      </div>
+      ${sorted.map(trainer => `
       <div class="trainer-card" onclick="window.showTrainerDetail('${trainer.id}')">
         <div class="trainer-photo" style="background-image: url('${trainer.photoUrl || trainer.photoURL}')"></div>
         <div class="trainer-card-info">
@@ -280,14 +292,19 @@ async function renderTrainersInGym(gymId) {
           <div class="trust-badge-row">
             ${trainer.isEarlyVerified ? '<span class="trust-tag tag-early"><i data-lucide="gem"></i> Early Verified</span>' : ''}
             <span class="trust-tag tag-verified"><i data-lucide="badge-check"></i> 자격인증</span>
+            ${trainer.trustMeta.hasScore ? `<span class="status-badge ${trainer.trustMeta.riskClass}">Risk Level: ${trainer.trustMeta.riskLabel}</span>` : ''}
           </div>
         </div>
         <div class="trust-score-container">
-          <span class="trust-score-label">TRUST</span>
-          <span class="trust-score-value">${trainer.trustScore}</span>
+          <span class="trust-score-label">TRUST SCORE</span>
+          ${trainer.trustMeta.hasScore
+            ? `<span class="trust-score-value">${trainer.trustMeta.score}점</span>`
+            : `<span class="trust-score-value" style="font-size: 12px; color: #94a3b8;">Trust Score 준비중</span>`
+          }
         </div>
       </div>
-    `).join('');
+    `).join('')}
+    `;
 
     if (window.lucide) lucide.createIcons();
   } catch (error) {
@@ -328,26 +345,7 @@ async function showGymDetail(gymId) {
     const gym = gymDoc.data();
     console.log('Successfully fetched gym detail:', gym.name);
 
-    const rawTrustScore = Number(gym.trustScore);
-    const hasTrustScore = Number.isFinite(rawTrustScore);
-    const clampedTrustScore = hasTrustScore
-      ? Math.max(0, Math.min(100, Math.round(rawTrustScore)))
-      : null;
-
-    let riskLabel = '';
-    let riskClass = '';
-    if (hasTrustScore) {
-      if (clampedTrustScore >= 80) {
-        riskLabel = 'SAFE';
-        riskClass = 'status-safe';
-      } else if (clampedTrustScore >= 50) {
-        riskLabel = 'CAUTION';
-        riskClass = 'status-caution';
-      } else {
-        riskLabel = 'RISK';
-        riskClass = 'status-busy';
-      }
-    }
+    const gymTrustMeta = getTrustScoreMeta(gym.trustScore);
 
     container.innerHTML = `
       <div class="detail-hero" style="background-image: url('${gym.imageUrl}')"></div>
@@ -355,10 +353,10 @@ async function showGymDetail(gymId) {
         <h2 class="detail-name">${gym.name}</h2>
         <div class="trust-score-container" style="position: static; margin-top: 12px; align-items: flex-start; background: var(--bg-soft); color: var(--text-main);">
           <span class="trust-score-label">TRUST SCORE</span>
-          ${hasTrustScore
-            ? `<span class="trust-score-value" style="font-size: 34px; line-height: 1;">${clampedTrustScore}</span>
+          ${gymTrustMeta.hasScore
+            ? `<span class="trust-score-value" style="font-size: 34px; line-height: 1;">${gymTrustMeta.score}</span>
                <div style="margin-top: 8px;">
-                 <span class="status-badge ${riskClass}">Risk Level: ${riskLabel}</span>
+                 <span class="status-badge ${gymTrustMeta.riskClass}">Risk Level: ${gymTrustMeta.riskLabel}</span>
                </div>`
             : `<span class="trust-score-value" style="font-size: 20px; color: #94a3b8;">Trust Score 준비중</span>`
           }
@@ -631,6 +629,23 @@ function handleHomeRenderCrash(containerId, sectionName, error) {
   const container = document.getElementById(containerId);
   renderHomeErrorState(container, getHomeLoadErrorMessage(error), 'render');
   safeShowToast(`데이터 로드 실패: ${sectionName} 화면을 구성하지 못했습니다.`, 'error');
+}
+
+function getTrustScoreMeta(scoreInput) {
+  const rawScore = Number(scoreInput);
+  const hasScore = Number.isFinite(rawScore);
+  if (!hasScore) {
+    return { hasScore: false, score: null, riskLabel: '', riskClass: '' };
+  }
+
+  const score = Math.max(0, Math.min(100, Math.round(rawScore)));
+  if (score >= 80) {
+    return { hasScore: true, score, riskLabel: 'SAFE', riskClass: 'status-safe' };
+  }
+  if (score >= 50) {
+    return { hasScore: true, score, riskLabel: 'CAUTION', riskClass: 'status-caution' };
+  }
+  return { hasScore: true, score, riskLabel: 'RISK', riskClass: 'status-busy' };
 }
 
 function openConsultationModal(gymId) {
