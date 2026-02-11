@@ -323,7 +323,13 @@ async function renderTrainersInGym(gymId) {
           <div class="trust-badge-row">
             ${trainer.isEarlyVerified ? '<span class="trust-tag tag-early"><i data-lucide="gem"></i> Early Verified</span>' : ''}
             <span class="trust-tag tag-verified"><i data-lucide="badge-check"></i> 자격인증</span>
-            ${trainer.trustMeta.hasScore ? `<span class="status-badge ${trainer.trustMeta.riskClass}">Risk Level: ${trainer.trustMeta.riskLabel}</span>` : ''}
+            <span
+              class="status-badge ${trainer.trustMeta.hasScore ? trainer.trustMeta.riskClass : ''}"
+              style="${trainer.trustMeta.hasScore ? 'font-size:12px; padding:5px 10px;' : 'font-size:12px; padding:5px 10px; background:#e2e8f0; color:#475569;'}"
+            >Risk Level: ${trainer.trustMeta.riskLabel}</span>
+          </div>
+          <div style="margin-top: 6px; font-size: 11px; color: var(--text-muted); line-height: 1.45;">
+            ${getTrainerRiskDescriptions(trainer, trainer.trustMeta).join('<br>')}
           </div>
         </div>
         <div class="trust-score-container">
@@ -664,12 +670,15 @@ function handleHomeRenderCrash(containerId, sectionName, error) {
 
 function getTrustScoreMeta(scoreInput) {
   const rawScore = Number(scoreInput);
-  const hasScore = Number.isFinite(rawScore);
-  if (!hasScore) {
-    return { hasScore: false, score: null, riskLabel: '', riskClass: '' };
+  const hasFiniteScore = Number.isFinite(rawScore);
+  if (!hasFiniteScore) {
+    return { hasScore: false, score: null, riskLabel: '평가 준비중', riskClass: '' };
   }
 
   const score = Math.max(0, Math.min(100, Math.round(rawScore)));
+  if (score === 0) {
+    return { hasScore: false, score: null, riskLabel: '평가 준비중', riskClass: '' };
+  }
   if (score >= 80) {
     return { hasScore: true, score, riskLabel: 'SAFE', riskClass: 'status-safe' };
   }
@@ -677,6 +686,27 @@ function getTrustScoreMeta(scoreInput) {
     return { hasScore: true, score, riskLabel: 'CAUTION', riskClass: 'status-caution' };
   }
   return { hasScore: true, score, riskLabel: 'RISK', riskClass: 'status-busy' };
+}
+
+function getTrainerRiskDescriptions(trainer, trustMeta) {
+  if (!trustMeta.hasScore) {
+    return ['Trust Score 준비중'];
+  }
+
+  if (trustMeta.riskLabel === 'SAFE') {
+    const isReportChecked = trainer?.reportHistoryVerified === true;
+    const noReportRecord = trainer?.reportCount === 0 || trainer?.reportStatus === 'none';
+    if (isReportChecked && noReportRecord) {
+      return ['✓ 기본 인증 확인', '✓ 신고 이력 없음'];
+    }
+    return ['✓ 기본 인증 확인', '✓ 표준 안내 준수(신고 없음 확인 전)'];
+  }
+
+  if (trustMeta.riskLabel === 'CAUTION') {
+    return ['⚠️ 추가 검증 필요'];
+  }
+
+  return ['🚨 주의 필요'];
 }
 
 function openConsultationModal(gymId) {
