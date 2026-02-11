@@ -1297,6 +1297,65 @@ a {
   font-weight: 500;
 }
 
+/* Trainer Review Minimal Form */
+#trainer-review-section .review-form-minimal {
+  margin-top: 12px;
+}
+
+#trainer-review-section .review-label-small {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.2px;
+  text-transform: none;
+}
+
+#trainer-review-section .review-divider {
+  border: 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  margin: 14px 0 16px;
+}
+
+#trainer-review-section .review-check-group {
+  margin-bottom: 18px;
+}
+
+#trainer-review-section .review-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  text-transform: none;
+}
+
+#trainer-review-section .review-check-item input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+#trainer-review-section #review-rating-stars {
+  margin-top: 6px;
+}
+
+#trainer-review-section .rating-star {
+  font-size: 24px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+#trainer-review-section textarea#review-comment {
+  border-radius: 12px;
+  background: var(--white);
+}
+
 /* Admin Dashboard Styles */
 .admin-stats-grid {
   display: grid;

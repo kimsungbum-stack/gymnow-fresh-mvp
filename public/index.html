@@ -187,13 +187,13 @@
       </div>
 
       <div id="trainer-review-section" class="detail-section" style="margin-top: 8px;">
-        <h3 class="detail-section-title">신뢰 리뷰 (거래 데이터)</h3>
+        <h3 class="detail-section-title">거래 신뢰 기록</h3>
         <p id="trainer-review-summary" class="detail-desc" style="margin-top: 8px;">리뷰 요약 준비 중...</p>
 
-        <form id="form-trainer-review" class="consult-form" style="margin-top: 16px;">
+        <form id="form-trainer-review" class="consult-form review-form-minimal" style="margin-top: 16px;">
           <input type="hidden" id="review-trainer-id" />
-          <div class="form-group">
-            <label for="review-rating">평점</label>
+          <div class="form-group review-rating-group">
+            <label for="review-rating" class="review-label-small">별점</label>
             <input type="hidden" id="review-rating" value="0" />
             <div id="review-rating-stars" role="radiogroup" aria-label="평점 선택" style="display: flex; gap: 6px; margin-top: 8px;">
               <button type="button" class="rating-star" data-rating="1" role="radio" aria-label="1점" aria-checked="false" aria-pressed="false" style="font-size: 24px; line-height: 1; background: transparent; border: none; color: #cbd5e1; cursor: pointer;">★</button>
@@ -203,22 +203,25 @@
               <button type="button" class="rating-star" data-rating="5" role="radio" aria-label="5점" aria-checked="false" aria-pressed="false" style="font-size: 24px; line-height: 1; background: transparent; border: none; color: #cbd5e1; cursor: pointer;">★</button>
             </div>
           </div>
+
+          <hr class="review-divider" />
+
           <div class="form-group">
-            <label for="review-comment">코멘트</label>
+            <label for="review-comment" class="review-label-small">거래 경험 기록</label>
             <textarea id="review-comment" rows="3" placeholder="거래 경험을 남겨주세요." required></textarea>
           </div>
 
-          <div class="form-group" style="margin-bottom: 10px;">
-            <label style="margin-bottom: 10px;">거래 체크 항목</label>
-            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 13px; font-weight: 600;">
+          <div class="form-group review-check-group">
+            <label class="review-label-small">거래 체크</label>
+            <label class="review-check-item">
               <input type="checkbox" id="review-check-refund" />
               환불/규정 안내를 받았나요?
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 13px; font-weight: 600; margin-top: 8px;">
+            <label class="review-check-item">
               <input type="checkbox" id="review-check-contract" />
               계약/합의가 명확했나요?
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 13px; font-weight: 600; margin-top: 8px;">
+            <label class="review-check-item">
               <input type="checkbox" id="review-check-upsell" />
               추가결제가 투명했나요?
             </label>
