@@ -183,7 +183,7 @@
         <!-- Content will be injected here -->
       </div>
     </section>
-    <section id="view-admin" class="view">
+    <section id="view-admin" class="view" hidden>
       <header class="view-header">
         <h1 class="view-title">매니저 대시보드</h1>
         <p class="view-subtitle">실시간 상담 신청 현황</p>
@@ -285,40 +285,49 @@
           <p class="result-note">* 실제 환불액은 센터별 계약 조건에 따라 다를 수 있습니다.</p>
         </div>
       </div>
-      <!-- Benefits Modal (New) -->
-      <div id="modal-benefits" class="modal">
-        <div class="modal-content">
-          <button class="modal-close"
-            onclick="document.getElementById('modal-benefits').classList.remove('active')">&times;</button>
-          <h2 class="modal-title">Early Verified 파트너 혜택</h2>
-          <p class="modal-subtitle">초기 10인에게만 주어지는 독보적 권한</p>
+    </div>
 
-          <div class="benefits-list">
-            <div class="benefit-item">
-              <i data-lucide="zap" class="benefit-icon"></i>
-              <div class="benefit-text">
-                <h4>전체 리스트 최상단 고정</h4>
-                <p>모든 검색 결과에서 일반 트레이너보다 우선 노출됩니다.</p>
-              </div>
-            </div>
-            <div class="benefit-item">
-              <i data-lucide="percent" class="benefit-icon"></i>
-              <div class="benefit-text">
-                <h4>중개 수수료 평생 면제</h4>
-                <p>추후 유료화 시에도 초기 파트너는 평생 수수료가 0원입니다.</p>
-              </div>
-            </div>
-            <div class="benefit-item">
-              <i data-lucide="award" class="benefit-icon"></i>
-              <div class="benefit-text">
-                <h4>인프라 표준 자문단 위촉</h4>
-                <p>GymNow의 표준 프로세스 수립에 자문단으로 참여합니다.</p>
-              </div>
+    <!-- Benefits Modal -->
+    <div id="modal-benefits" class="modal">
+      <div class="modal-content">
+        <button class="modal-close"
+          onclick="document.getElementById('modal-benefits').classList.remove('active')">&times;</button>
+        <h2 class="modal-title">Early Verified 파트너 혜택</h2>
+        <p class="modal-subtitle">검증과 거래 표준 운영을 위한 지원 프로그램</p>
+
+        <div class="benefits-list">
+          <div class="benefit-item">
+            <i data-lucide="zap" class="benefit-icon"></i>
+            <div class="benefit-text">
+              <h4>인증 심사 우선 처리</h4>
+              <p>자격 및 경력 서류 검증을 우선 접수해 처리 시간을 단축합니다.</p>
             </div>
           </div>
-          <button class="btn-primary full-width"
-            onclick="document.getElementById('modal-benefits').classList.remove('active')">확인했습니다</button>
+          <div class="benefit-item">
+            <i data-lucide="badge-check" class="benefit-icon"></i>
+            <div class="benefit-text">
+              <h4>증빙 배지 확장</h4>
+              <p>자격·경력 증빙 항목을 추가 표시해 프로필 신뢰도를 강화합니다.</p>
+            </div>
+          </div>
+          <div class="benefit-item">
+            <i data-lucide="file-text" class="benefit-icon"></i>
+            <div class="benefit-text">
+              <h4>표준 안내 템플릿 제공</h4>
+              <p>센터/트레이너용 표준 계약·환불 안내 템플릿을 제공합니다.</p>
+            </div>
+          </div>
+          <div class="benefit-item">
+            <i data-lucide="shield-check" class="benefit-icon"></i>
+            <div class="benefit-text">
+              <h4>분쟁 예방·중재 가이드</h4>
+              <p>분쟁 예방 체크리스트와 분쟁 발생 시 우선 상담 가이드를 제공합니다.</p>
+            </div>
+          </div>
         </div>
+        <p class="modal-subtitle" style="margin-top: 8px;">정렬과 노출 순서는 Trust Score 기준으로 운영됩니다.</p>
+        <button class="btn-primary full-width"
+          onclick="document.getElementById('modal-benefits').classList.remove('active')">확인했습니다</button>
       </div>
     </div>
   </div>

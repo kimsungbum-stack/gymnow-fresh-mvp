@@ -185,6 +185,12 @@ function switchView(viewId) {
       bottomNav.classList.remove('nav-visible');
     }
   }
+
+  // Keep admin view hidden by default and reveal only on explicit admin navigation
+  const adminView = document.getElementById('view-admin');
+  if (adminView) {
+    adminView.hidden = viewId !== 'view-admin';
+  }
 }
 
 /**
