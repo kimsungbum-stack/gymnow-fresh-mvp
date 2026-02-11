@@ -328,10 +328,42 @@ async function showGymDetail(gymId) {
     const gym = gymDoc.data();
     console.log('Successfully fetched gym detail:', gym.name);
 
+    const rawTrustScore = Number(gym.trustScore);
+    const hasTrustScore = Number.isFinite(rawTrustScore);
+    const clampedTrustScore = hasTrustScore
+      ? Math.max(0, Math.min(100, Math.round(rawTrustScore)))
+      : null;
+
+    let riskLabel = '';
+    let riskClass = '';
+    if (hasTrustScore) {
+      if (clampedTrustScore >= 80) {
+        riskLabel = 'SAFE';
+        riskClass = 'status-safe';
+      } else if (clampedTrustScore >= 50) {
+        riskLabel = 'CAUTION';
+        riskClass = 'status-caution';
+      } else {
+        riskLabel = 'RISK';
+        riskClass = 'status-busy';
+      }
+    }
+
     container.innerHTML = `
       <div class="detail-hero" style="background-image: url('${gym.imageUrl}')"></div>
       <div class="detail-info-main">
         <h2 class="detail-name">${gym.name}</h2>
+        <div class="trust-score-container" style="position: static; margin-top: 12px; align-items: flex-start; background: var(--bg-soft); color: var(--text-main);">
+          <span class="trust-score-label">TRUST SCORE</span>
+          ${hasTrustScore
+            ? `<span class="trust-score-value" style="font-size: 34px; line-height: 1;">${clampedTrustScore}</span>
+               <div style="margin-top: 8px;">
+                 <span class="status-badge ${riskClass}">Risk Level: ${riskLabel}</span>
+               </div>`
+            : `<span class="trust-score-value" style="font-size: 20px; color: #94a3b8;">Trust Score 준비중</span>`
+          }
+          <div style="margin-top: 8px; font-size: 12px; color: var(--text-muted);">📍 대구 기준</div>
+        </div>
         <div class="gym-card-area" style="font-size: 16px; margin-top: 4px;">📍 ${gym.region}</div>
         <p class="detail-desc" style="margin-top: 20px;">${gym.description || gym.desc || '센터 소개 준비 중입니다.'}</p>
       </div>
