@@ -139,7 +139,10 @@
       <section class="early-verified-section">
         <div class="section-header-flex">
           <h3 class="section-subtitle">💎 Early Verified 파트너</h3>
-          <button class="btn-text-link" onclick="window.openBenefitsModal()">혜택 보기</button>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-text-link" onclick="window.openRefundModal()">환불 계산기</button>
+            <button class="btn-text-link" onclick="window.openBenefitsModal()">혜택 보기</button>
+          </div>
         </div>
         <div id="early-verified-scroll" class="horizontal-scroll">
           <!-- Rendered by JS -->
@@ -190,8 +193,15 @@
         <form id="form-trainer-review" class="consult-form" style="margin-top: 16px;">
           <input type="hidden" id="review-trainer-id" />
           <div class="form-group">
-            <label for="review-rating">평점 (1~5)</label>
-            <input type="number" id="review-rating" min="1" max="5" placeholder="5" required />
+            <label for="review-rating">평점</label>
+            <input type="hidden" id="review-rating" value="0" />
+            <div id="review-rating-stars" role="radiogroup" aria-label="평점 선택" style="display: flex; gap: 6px; margin-top: 8px;">
+              <button type="button" class="rating-star" data-rating="1" role="radio" aria-label="1점" aria-checked="false" aria-pressed="false" style="font-size: 24px; line-height: 1; background: transparent; border: none; color: #cbd5e1; cursor: pointer;">★</button>
+              <button type="button" class="rating-star" data-rating="2" role="radio" aria-label="2점" aria-checked="false" aria-pressed="false" style="font-size: 24px; line-height: 1; background: transparent; border: none; color: #cbd5e1; cursor: pointer;">★</button>
+              <button type="button" class="rating-star" data-rating="3" role="radio" aria-label="3점" aria-checked="false" aria-pressed="false" style="font-size: 24px; line-height: 1; background: transparent; border: none; color: #cbd5e1; cursor: pointer;">★</button>
+              <button type="button" class="rating-star" data-rating="4" role="radio" aria-label="4점" aria-checked="false" aria-pressed="false" style="font-size: 24px; line-height: 1; background: transparent; border: none; color: #cbd5e1; cursor: pointer;">★</button>
+              <button type="button" class="rating-star" data-rating="5" role="radio" aria-label="5점" aria-checked="false" aria-pressed="false" style="font-size: 24px; line-height: 1; background: transparent; border: none; color: #cbd5e1; cursor: pointer;">★</button>
+            </div>
           </div>
           <div class="form-group">
             <label for="review-comment">코멘트</label>

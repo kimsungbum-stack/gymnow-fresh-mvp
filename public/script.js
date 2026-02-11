@@ -56,6 +56,8 @@ if (document.readyState === 'loading') {
 let currentActiveGymId = null;
 let currentReviewTrainerId = null;
 const TRAINER_REVIEW_PROFILE_HINT = '리뷰는 전문가 프로필 확인 후 작성할 수 있습니다.';
+const REVIEW_SPAM_GUARD_PREFIX = 'gymnow_review_guard_';
+const REVIEW_RESUBMIT_COOLDOWN_MS = 10000;
 
 /**
  * SPA Navigation
@@ -141,9 +143,11 @@ function initModalEvents() {
 
 function initTrainerReviewEvents() {
   const form = document.getElementById('form-trainer-review');
-  if (!form || form.dataset.bound === 'true') return;
-  form.addEventListener('submit', handleTrainerReviewSubmit);
-  form.dataset.bound = 'true';
+  if (form && form.dataset.bound !== 'true') {
+    form.addEventListener('submit', handleTrainerReviewSubmit);
+    form.dataset.bound = 'true';
+  }
+  initReviewRatingUI();
 }
 
 /**
@@ -657,6 +661,7 @@ function resetTrainerDetailState() {
     container.innerHTML = '<div class="loading-spinner">✨ 전문가 프로필을 불러오는 중...</div>';
   }
   if (form) form.reset();
+  setReviewRating(0);
   if (reviewTrainerIdInput) reviewTrainerIdInput.value = '';
   if (reviewSummary) reviewSummary.innerText = '불러오는 중...';
   if (reviewList) reviewList.innerHTML = '';
@@ -736,13 +741,17 @@ function renderTrainerReviewSummary(reviews) {
     : 0;
   const recentBoundary = Date.now() - (7 * 24 * 60 * 60 * 1000);
   const recentCount = reviews.filter((review) => getReviewCreatedAtMs(review) >= recentBoundary).length;
+  const checkAvg = reviewCount > 0
+    ? reviews.reduce((sum, review) => sum + countReviewChecks(review.checks), 0) / reviewCount
+    : 0;
+  const signalText = getReviewSignalText(checkAvg, reviewCount);
 
   if (reviewCount === 0) {
-    summaryEl.innerText = '리뷰 0개 · 평균 - · 분산 - · 최근7일 0개';
+    summaryEl.innerHTML = '리뷰 0개 · 평균 - · 분산 - · 최근7일 0개 · 거래 체크 충족: 평균 -/3<br><span style="color: var(--text-muted);">신호: 검증 진행중</span>';
     return;
   }
 
-  summaryEl.innerText = `리뷰 ${reviewCount}개 · 평균 ${avg.toFixed(1)} · 분산 ${variance.toFixed(2)} · 최근7일 ${recentCount}개`;
+  summaryEl.innerHTML = `리뷰 ${reviewCount}개 · 평균 ${avg.toFixed(1)} · 분산 ${variance.toFixed(2)} · 최근7일 ${recentCount}개 · 거래 체크 충족: 평균 ${checkAvg.toFixed(1)}/3<br><span style="color: var(--text-muted);">신호: ${signalText}</span>`;
 }
 
 function renderTrainerReviewList(reviews) {
@@ -820,11 +829,22 @@ async function handleTrainerReviewSubmit(e) {
     return;
   }
   if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
-    setTrainerReviewStatus('등록 실패: 평점은 1~5 사이여야 합니다.', 'error');
+    setTrainerReviewStatus('평점을 선택해주세요', 'error');
     return;
   }
   if (!comment) {
     setTrainerReviewStatus('등록 실패: 코멘트를 입력해주세요.', 'error');
+    return;
+  }
+  const guardState = readReviewSpamGuard(reviewTrainerId);
+  const now = Date.now();
+  if (guardState.lastSubmittedAt && now - guardState.lastSubmittedAt < REVIEW_RESUBMIT_COOLDOWN_MS) {
+    setTrainerReviewStatus('등록 실패: 10초 후 다시 시도해주세요.', 'error');
+    return;
+  }
+  const normalizedComment = normalizeReviewComment(comment);
+  if (guardState.lastCommentNormalized && guardState.lastCommentNormalized === normalizedComment) {
+    setTrainerReviewStatus('등록 실패: 동일 코멘트는 연속 등록할 수 없습니다.', 'error');
     return;
   }
 
@@ -848,7 +868,12 @@ async function handleTrainerReviewSubmit(e) {
     });
 
     e.target.reset();
+    setReviewRating(0);
     if (trainerIdInput) trainerIdInput.value = reviewTrainerId;
+    writeReviewSpamGuard(reviewTrainerId, {
+      lastSubmittedAt: Date.now(),
+      lastCommentNormalized: normalizedComment
+    });
     setTrainerReviewStatus('등록 완료', 'success');
     safeShowToast('등록 완료', 'success');
     await loadTrainerReviews(reviewTrainerId);
@@ -860,6 +885,114 @@ async function handleTrainerReviewSubmit(e) {
       submitBtn.disabled = false;
       submitBtn.innerText = '리뷰 등록';
     }
+  }
+}
+
+function initReviewRatingUI() {
+  const starsRoot = document.getElementById('review-rating-stars');
+  if (!starsRoot || starsRoot.dataset.bound === 'true') return;
+  const stars = starsRoot.querySelectorAll('.rating-star');
+  if (!stars.length) return;
+
+  stars.forEach((star) => {
+    star.addEventListener('click', () => {
+      const value = Number(star.dataset.rating || 0);
+      setReviewRating(value);
+    });
+    star.addEventListener('keydown', (event) => {
+      const current = Number(star.dataset.rating || 0);
+      if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const next = Math.min(5, current + 1);
+        focusAndSetReviewRating(next);
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        const prev = Math.max(1, current - 1);
+        focusAndSetReviewRating(prev);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        focusAndSetReviewRating(1);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        focusAndSetReviewRating(5);
+      } else if (event.key === ' ' || event.key === 'Enter') {
+        event.preventDefault();
+        setReviewRating(current);
+      }
+    });
+  });
+
+  starsRoot.dataset.bound = 'true';
+  setReviewRating(0);
+}
+
+function focusAndSetReviewRating(value) {
+  const target = document.querySelector(`#review-rating-stars .rating-star[data-rating="${value}"]`);
+  if (target) target.focus();
+  setReviewRating(value);
+}
+
+function setReviewRating(value) {
+  const ratingValue = Number.isFinite(Number(value)) ? Math.max(0, Math.min(5, Number(value))) : 0;
+  const ratingInput = document.getElementById('review-rating');
+  const stars = document.querySelectorAll('#review-rating-stars .rating-star');
+  if (ratingInput) ratingInput.value = String(ratingValue);
+
+  stars.forEach((star) => {
+    const starValue = Number(star.dataset.rating || 0);
+    const active = ratingValue > 0 && starValue <= ratingValue;
+    star.style.color = active ? '#f59e0b' : '#cbd5e1';
+    star.setAttribute('aria-pressed', active ? 'true' : 'false');
+    star.setAttribute('aria-checked', ratingValue === starValue ? 'true' : 'false');
+  });
+}
+
+function countReviewChecks(checks) {
+  const source = checks || {};
+  return [
+    !!source.refund_explained,
+    !!source.contract_clear,
+    !!source.upsell_transparent
+  ].filter(Boolean).length;
+}
+
+function getReviewSignalText(avgCheck, reviewCount) {
+  if (!reviewCount) return '검증 진행중';
+  if (avgCheck < 1.5) return '추가 검증 필요';
+  if (avgCheck >= 2.3) return '거래 기준 준수 경향';
+  return '검증 진행중';
+}
+
+function normalizeReviewComment(comment) {
+  return String(comment || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function getReviewSpamGuardKey(trainerId) {
+  return `${REVIEW_SPAM_GUARD_PREFIX}${trainerId || ''}`;
+}
+
+function readReviewSpamGuard(trainerId) {
+  if (!trainerId) return {};
+  try {
+    const raw = window.localStorage.getItem(getReviewSpamGuardKey(trainerId));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === 'object') ? parsed : {};
+  } catch (error) {
+    console.warn('Review spam guard read failed:', error);
+    return {};
+  }
+}
+
+function writeReviewSpamGuard(trainerId, guard) {
+  if (!trainerId) return;
+  try {
+    window.localStorage.setItem(getReviewSpamGuardKey(trainerId), JSON.stringify({
+      lastSubmittedAt: Number(guard?.lastSubmittedAt || 0),
+      lastCommentNormalized: String(guard?.lastCommentNormalized || '')
+    }));
+  } catch (error) {
+    console.warn('Review spam guard write failed:', error);
   }
 }
 
