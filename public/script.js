@@ -264,7 +264,38 @@ async function renderTrainersInGym(gymId) {
     const q = query(collection(db, 'trainers'), where('gymId', '==', gymId));
     const snapshot = await getDocs(q);
     const filtered = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const sorted = filtered
+    const mockTrainers = [
+      {
+        id: 'mock-trainer-1',
+        gymId,
+        name: '김트레이너',
+        specialty: '퍼스널 트레이닝',
+        trustScore: 95,
+        isEarlyVerified: true
+      },
+      {
+        id: 'mock-trainer-2',
+        gymId,
+        name: '이코치',
+        specialty: '체형 교정',
+        trustScore: 72,
+        isEarlyVerified: false
+      },
+      {
+        id: 'mock-trainer-3',
+        gymId,
+        name: '박헬스',
+        specialty: '기초 체력 향상',
+        trustScore: null,
+        isEarlyVerified: false
+      }
+    ];
+    const sourceTrainers = filtered.length > 0 ? filtered : mockTrainers;
+    if (filtered.length === 0) {
+      console.log('Using mock trainer data (dev only)');
+    }
+
+    const sorted = sourceTrainers
       .map((trainer) => ({ ...trainer, trustMeta: getTrustScoreMeta(trainer.trustScore) }))
       .sort((a, b) => {
         if (a.trustMeta.hasScore !== b.trustMeta.hasScore) return a.trustMeta.hasScore ? -1 : 1;
