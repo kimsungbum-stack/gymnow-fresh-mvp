@@ -274,32 +274,7 @@ async function renderTrainersInGym(gymId) {
     const q = query(collection(db, 'trainers'), where('gymId', '==', gymId));
     const snapshot = await getDocs(q);
     const filtered = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const mockTrainers = [
-      {
-        id: 'trainer_kim',
-        gymId,
-        name: '김트레이너',
-        specialty: '퍼스널 트레이닝',
-        trustScore: 95,
-        isEarlyVerified: true
-      },
-      {
-        id: 'trainer_lee',
-        gymId,
-        name: '이코치',
-        specialty: '체형 교정',
-        trustScore: 72,
-        isEarlyVerified: false
-      },
-      {
-        id: 'trainer_park',
-        gymId,
-        name: '박헬스',
-        specialty: '기초 체력 향상',
-        trustScore: null,
-        isEarlyVerified: false
-      }
-    ];
+    const mockTrainers = getMockTrainersForGym(gymId);
     const sourceTrainers = filtered.length > 0 ? filtered : mockTrainers;
     if (filtered.length === 0) {
       console.log('Using mock trainer data (dev only)');
@@ -454,15 +429,23 @@ async function showTrainerDetail(trainerId) {
 
     const trainerDoc = await getDoc(doc(db, 'trainers', trainerId));
     console.log(`[trainer] doc exists=${trainerDoc.exists()}`);
-    if (!trainerDoc.exists()) {
-      renderTrainerDetailError(
-        container,
-        '불러오기 실패: 전문가 정보를 찾을 수 없습니다.',
-        TRAINER_REVIEW_PROFILE_HINT
-      );
-      return;
+    let trainer = null;
+    if (trainerDoc.exists()) {
+      trainer = trainerDoc.data();
+    } else {
+      trainer = getMockTrainerById(trainerId);
+      if (trainer) {
+        console.log(`[trainer] using mock profile id=${trainerId}`);
+      } else {
+        renderTrainerDetailError(
+          container,
+          '불러오기 실패: 전문가 정보를 찾을 수 없습니다.',
+          TRAINER_REVIEW_PROFILE_HINT
+        );
+        return;
+      }
     }
-    const trainer = trainerDoc.data();
+    const trainerTrustMeta = getTrustScoreMeta(trainer.trustScore);
 
     container.innerHTML = `
       <div class="detail-hero" style="background-image: url('${trainer.photoUrl || trainer.photoURL || 'https://i.pravatar.cc/150?u=' + trainer.name}')"></div>
@@ -474,7 +457,7 @@ async function showTrainerDetail(trainerId) {
           </div>
           <div class="trust-score-container" style="position: static; padding: 10px 20px;">
             <span class="trust-score-label">TRUST SCORE</span>
-            <span class="trust-score-value" style="font-size: 20px;">${trainer.trustScore || '9.0'}</span>
+            <span class="trust-score-value" style="font-size: 20px;">${trainerTrustMeta.hasScore ? `${trainerTrustMeta.score}점` : '준비중'}</span>
           </div>
         </div>
         
@@ -943,6 +926,42 @@ function handleHomeRenderCrash(containerId, sectionName, error) {
   const container = document.getElementById(containerId);
   renderHomeErrorState(container, getHomeLoadErrorMessage(error), 'render');
   safeShowToast(`데이터 로드 실패: ${sectionName} 화면을 구성하지 못했습니다.`, 'error');
+}
+
+function getMockTrainersForGym(gymId = '') {
+  return [
+    {
+      id: 'trainer_kim',
+      gymId,
+      name: '김트레이너',
+      specialty: '퍼스널 트레이닝',
+      trustScore: 95,
+      isEarlyVerified: true,
+      description: '기초 체력 향상부터 체중 관리까지 단계별로 안내합니다.'
+    },
+    {
+      id: 'trainer_lee',
+      gymId,
+      name: '이코치',
+      specialty: '체형 교정',
+      trustScore: 72,
+      isEarlyVerified: false,
+      description: '통증 완화와 자세 교정을 중심으로 수업을 진행합니다.'
+    },
+    {
+      id: 'trainer_park',
+      gymId,
+      name: '박헬스',
+      specialty: '기초 체력 향상',
+      trustScore: null,
+      isEarlyVerified: false,
+      description: '초보자 맞춤 루틴으로 운동 습관을 만드는 데 집중합니다.'
+    }
+  ];
+}
+
+function getMockTrainerById(trainerId) {
+  return getMockTrainersForGym(currentActiveGymId || '').find((trainer) => trainer.id === trainerId) || null;
 }
 
 function getTrustScoreMeta(scoreInput) {
