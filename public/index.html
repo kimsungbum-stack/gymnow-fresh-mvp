@@ -182,6 +182,47 @@
       <div id="trainer-detail-content" class="detail-container">
         <!-- Content will be injected here -->
       </div>
+
+      <div id="trainer-review-section" class="detail-section" style="margin-top: 8px;">
+        <h3 class="detail-section-title">신뢰 리뷰 (거래 데이터)</h3>
+        <p id="trainer-review-summary" class="detail-desc" style="margin-top: 8px;">리뷰 요약 준비 중...</p>
+
+        <form id="form-trainer-review" class="consult-form" style="margin-top: 16px;">
+          <input type="hidden" id="review-trainer-id" />
+          <div class="form-group">
+            <label for="review-rating">평점 (1~5)</label>
+            <input type="number" id="review-rating" min="1" max="5" placeholder="5" required />
+          </div>
+          <div class="form-group">
+            <label for="review-comment">코멘트</label>
+            <textarea id="review-comment" rows="3" placeholder="거래 경험을 남겨주세요." required></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label style="margin-bottom: 10px;">거래 체크 항목</label>
+            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 13px; font-weight: 600;">
+              <input type="checkbox" id="review-check-refund" />
+              환불/규정 안내를 받았나요?
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 13px; font-weight: 600; margin-top: 8px;">
+              <input type="checkbox" id="review-check-contract" />
+              계약/합의가 명확했나요?
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 13px; font-weight: 600; margin-top: 8px;">
+              <input type="checkbox" id="review-check-upsell" />
+              추가결제가 투명했나요?
+            </label>
+          </div>
+
+          <button id="btn-submit-trainer-review" type="submit" class="btn-primary full-width">리뷰 등록</button>
+        </form>
+
+        <div id="trainer-review-status" class="detail-desc" style="margin-top: 12px; min-height: 22px;"></div>
+
+        <div id="trainer-review-list" class="application-list" style="padding: 0; margin-top: 12px;">
+          <div class="loading-spinner">리뷰 데이터를 불러오는 중...</div>
+        </div>
+      </div>
     </section>
     <section id="view-admin" class="view" hidden>
       <header class="view-header">

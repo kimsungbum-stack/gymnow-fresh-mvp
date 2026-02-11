@@ -28,6 +28,7 @@ function init() {
   initNavigation();
   initDetailEvents();
   initModalEvents();
+  initTrainerReviewEvents();
   if (window.lucide) {
     lucide.createIcons();
   }
@@ -53,6 +54,7 @@ if (document.readyState === 'loading') {
 }
 
 let currentActiveGymId = null;
+let currentReviewTrainerId = null;
 
 /**
  * SPA Navigation
@@ -134,6 +136,13 @@ function initModalEvents() {
       }
     });
   }
+}
+
+function initTrainerReviewEvents() {
+  const form = document.getElementById('form-trainer-review');
+  if (!form || form.dataset.bound === 'true') return;
+  form.addEventListener('submit', handleTrainerReviewSubmit);
+  form.dataset.bound = 'true';
 }
 
 /**
@@ -423,6 +432,9 @@ async function showTrainerDetail(trainerId) {
 
   const container = document.getElementById('trainer-detail-content');
   if (!container) return;
+  const reviewSummary = document.getElementById('trainer-review-summary');
+  const reviewList = document.getElementById('trainer-review-list');
+  const reviewTrainerIdInput = document.getElementById('review-trainer-id');
 
   switchView('view-trainer-detail');
   window.scrollTo(0, 0);
@@ -433,6 +445,11 @@ async function showTrainerDetail(trainerId) {
   }
 
   container.innerHTML = '<div class="loading-spinner">✨ 전문가 프로필을 불러오는 중...</div>';
+  if (reviewSummary) reviewSummary.innerText = '리뷰 요약 준비 중...';
+  if (reviewList) reviewList.innerHTML = '<div class="loading-spinner">리뷰 데이터를 불러오는 중...</div>';
+  setTrainerReviewStatus('');
+  currentReviewTrainerId = trainerId;
+  if (reviewTrainerIdInput) reviewTrainerIdInput.value = trainerId;
 
   try {
     console.log(`Fetching trainer detail from Firestore for ID: ${trainerId}`);
@@ -480,10 +497,12 @@ async function showTrainerDetail(trainerId) {
       </div>
     `;
 
+    await loadTrainerReviews(trainerId);
     if (window.lucide) lucide.createIcons();
   } catch (error) {
     console.error('Trainer Detail Error:', error);
     showToast('전문가 정보를 불러오지 못했습니다.', 'error');
+    setTrainerReviewStatus('리뷰 데이터를 불러오지 못했습니다.', 'error');
   }
 }
 
@@ -600,6 +619,190 @@ function showToast(message, type = 'success') {
 function safeShowToast(message, type = 'info') {
   if (typeof showToast === 'function') {
     showToast(message, type);
+  }
+}
+
+function setTrainerReviewStatus(message, type = 'info') {
+  const statusEl = document.getElementById('trainer-review-status');
+  if (!statusEl) return;
+  statusEl.innerText = message || '';
+
+  if (!message) {
+    statusEl.style.color = '';
+    return;
+  }
+
+  if (type === 'error') {
+    statusEl.style.color = 'var(--error)';
+  } else if (type === 'success') {
+    statusEl.style.color = 'var(--success)';
+  } else {
+    statusEl.style.color = 'var(--text-muted)';
+  }
+}
+
+function getReviewCreatedAtMs(review) {
+  const createdAt = review?.createdAt;
+  if (!createdAt) return 0;
+  if (typeof createdAt.toMillis === 'function') return createdAt.toMillis();
+  if (typeof createdAt.seconds === 'number') return createdAt.seconds * 1000;
+  const parsed = Date.parse(createdAt);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatReviewDate(review) {
+  const ms = getReviewCreatedAtMs(review);
+  if (!ms) return '시간 미기록';
+  return new Date(ms).toLocaleString('ko-KR');
+}
+
+function escapeHtml(input) {
+  return String(input || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderTrainerReviewSummary(reviews) {
+  const summaryEl = document.getElementById('trainer-review-summary');
+  if (!summaryEl) return;
+
+  const ratings = reviews
+    .map((review) => Number(review.rating))
+    .filter((rating) => Number.isFinite(rating));
+  const reviewCount = reviews.length;
+  const ratingCount = ratings.length;
+  const avg = ratingCount > 0
+    ? ratings.reduce((sum, value) => sum + value, 0) / ratingCount
+    : 0;
+  const variance = ratingCount > 0
+    ? ratings.reduce((sum, value) => sum + ((value - avg) ** 2), 0) / ratingCount
+    : 0;
+  const recentBoundary = Date.now() - (7 * 24 * 60 * 60 * 1000);
+  const recentCount = reviews.filter((review) => getReviewCreatedAtMs(review) >= recentBoundary).length;
+
+  if (reviewCount === 0) {
+    summaryEl.innerText = '리뷰 0개 · 평균 - · 분산 - · 최근7일 0개';
+    return;
+  }
+
+  summaryEl.innerText = `리뷰 ${reviewCount}개 · 평균 ${avg.toFixed(1)} · 분산 ${variance.toFixed(2)} · 최근7일 ${recentCount}개`;
+}
+
+function renderTrainerReviewList(reviews) {
+  const listEl = document.getElementById('trainer-review-list');
+  if (!listEl) return;
+
+  if (reviews.length === 0) {
+    listEl.innerHTML = '<div class="empty-state">아직 등록된 신뢰 리뷰가 없습니다.</div>';
+    return;
+  }
+
+  listEl.innerHTML = reviews.map((review) => {
+    const checks = review.checks || {};
+    return `
+      <div class="app-card" style="padding: 16px; border-radius: 16px;">
+        <div class="app-info" style="gap: 8px; width: 100%;">
+          <div class="app-header-row" style="justify-content: space-between;">
+            <div class="app-user">평점 ${Number(review.rating) || '-'} / 5</div>
+            <span class="badge-consult">${formatReviewDate(review)}</span>
+          </div>
+          <div class="app-feedback-preview">${escapeHtml(review.comment)}</div>
+          <div class="trust-badge-row">
+            ${checks.refund_explained ? '<span class="trust-tag tag-verified">환불 안내 확인</span>' : ''}
+            ${checks.contract_clear ? '<span class="trust-tag tag-verified">계약 명확</span>' : ''}
+            ${checks.upsell_transparent ? '<span class="trust-tag tag-verified">추가결제 투명</span>' : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadTrainerReviews(trainerId) {
+  const listEl = document.getElementById('trainer-review-list');
+  if (!listEl) return;
+  if (!trainerId) {
+    renderTrainerReviewSummary([]);
+    renderTrainerReviewList([]);
+    return;
+  }
+
+  listEl.innerHTML = '<div class="loading-spinner">리뷰 데이터를 불러오는 중...</div>';
+  try {
+    const q = query(collection(db, 'trainer_reviews'), where('trainerId', '==', trainerId));
+    const snap = await getDocs(q);
+    const reviews = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    reviews.sort((a, b) => getReviewCreatedAtMs(b) - getReviewCreatedAtMs(a));
+
+    renderTrainerReviewSummary(reviews);
+    renderTrainerReviewList(reviews);
+  } catch (error) {
+    console.error('Trainer Review Load Error:', error);
+    listEl.innerHTML = '<div class="empty-state">데이터 로드 실패: 리뷰를 불러오지 못했습니다.</div>';
+    renderTrainerReviewSummary([]);
+    setTrainerReviewStatus('리뷰 로드 실패', 'error');
+  }
+}
+
+async function handleTrainerReviewSubmit(e) {
+  e.preventDefault();
+
+  const submitBtn = document.getElementById('btn-submit-trainer-review');
+  const ratingInput = document.getElementById('review-rating');
+  const commentInput = document.getElementById('review-comment');
+  const trainerIdInput = document.getElementById('review-trainer-id');
+  const reviewTrainerId = trainerIdInput?.value || currentReviewTrainerId;
+  const rating = Number(ratingInput?.value);
+  const comment = String(commentInput?.value || '').trim();
+
+  if (!reviewTrainerId) {
+    setTrainerReviewStatus('등록 실패: 트레이너 정보가 없습니다.', 'error');
+    return;
+  }
+  if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+    setTrainerReviewStatus('등록 실패: 평점은 1~5 사이여야 합니다.', 'error');
+    return;
+  }
+  if (!comment) {
+    setTrainerReviewStatus('등록 실패: 코멘트를 입력해주세요.', 'error');
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerText = '등록 중...';
+  }
+  setTrainerReviewStatus('리뷰 등록 중...', 'info');
+
+  try {
+    await addDoc(collection(db, 'trainer_reviews'), {
+      trainerId: reviewTrainerId,
+      rating,
+      comment,
+      checks: {
+        refund_explained: !!document.getElementById('review-check-refund')?.checked,
+        contract_clear: !!document.getElementById('review-check-contract')?.checked,
+        upsell_transparent: !!document.getElementById('review-check-upsell')?.checked
+      },
+      createdAt: serverTimestamp()
+    });
+
+    e.target.reset();
+    if (trainerIdInput) trainerIdInput.value = reviewTrainerId;
+    setTrainerReviewStatus('등록 완료', 'success');
+    safeShowToast('등록 완료', 'success');
+    await loadTrainerReviews(reviewTrainerId);
+  } catch (error) {
+    console.error('Trainer Review Submit Error:', error);
+    setTrainerReviewStatus('등록 실패', 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = '리뷰 등록';
+    }
   }
 }
 
