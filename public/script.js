@@ -55,6 +55,7 @@ if (document.readyState === 'loading') {
 
 let currentActiveGymId = null;
 let currentReviewTrainerId = null;
+const TRAINER_REVIEW_PROFILE_HINT = '리뷰는 전문가 프로필 확인 후 작성할 수 있습니다.';
 
 /**
  * SPA Navigation
@@ -432,7 +433,8 @@ async function showTrainerDetail(trainerId) {
   const reviewTrainerIdInput = document.getElementById('review-trainer-id');
 
   try {
-    console.log(`[trainer] showTrainerDetail trainerId=${trainerId}`);
+    console.log(`[trainer] showTrainerDetail id=${trainerId || ''}`);
+    resetTrainerDetailState();
     switchView('view-trainer-detail');
     window.scrollTo(0, 0);
 
@@ -442,23 +444,24 @@ async function showTrainerDetail(trainerId) {
     }
 
     if (!trainerId || trainerId === 'undefined') {
-      renderTrainerDetailError(container, '불러오기 실패: 유효하지 않은 전문가 정보입니다.');
-      if (reviewSummary) reviewSummary.innerText = '리뷰 요약을 불러올 수 없습니다.';
-      if (reviewList) reviewList.innerHTML = '<div class="empty-state">리뷰 로드 실패</div>';
-      setTrainerReviewStatus('리뷰 로드 실패', 'error');
+      renderTrainerDetailError(
+        container,
+        '불러오기 실패: 유효하지 않은 전문가 정보입니다.',
+        TRAINER_REVIEW_PROFILE_HINT
+      );
       return;
     }
 
-    container.innerHTML = '<div class="loading-spinner">✨ 전문가 프로필을 불러오는 중...</div>';
-    if (reviewSummary) reviewSummary.innerText = '리뷰 요약 준비 중...';
-    if (reviewList) reviewList.innerHTML = '<div class="loading-spinner">리뷰 데이터를 불러오는 중...</div>';
-    setTrainerReviewStatus('');
-    currentReviewTrainerId = trainerId;
-    if (reviewTrainerIdInput) reviewTrainerIdInput.value = trainerId;
-
     const trainerDoc = await getDoc(doc(db, 'trainers', trainerId));
-    console.log(`[trainer] loaded trainer doc exists=${trainerDoc.exists()}`);
-    if (!trainerDoc.exists()) throw new Error('전문가 정보를 찾을 수 없습니다.');
+    console.log(`[trainer] doc exists=${trainerDoc.exists()}`);
+    if (!trainerDoc.exists()) {
+      renderTrainerDetailError(
+        container,
+        '불러오기 실패: 전문가 정보를 찾을 수 없습니다.',
+        TRAINER_REVIEW_PROFILE_HINT
+      );
+      return;
+    }
     const trainer = trainerDoc.data();
 
     container.innerHTML = `
@@ -502,6 +505,12 @@ async function showTrainerDetail(trainerId) {
     `;
 
     if (window.lucide) lucide.createIcons();
+    currentReviewTrainerId = trainerId;
+    if (reviewTrainerIdInput) reviewTrainerIdInput.value = trainerId;
+    setTrainerReviewSectionVisible(true);
+    if (reviewSummary) reviewSummary.innerText = '불러오는 중...';
+    if (reviewList) reviewList.innerHTML = '<div class="loading-spinner">리뷰 데이터를 불러오는 중...</div>';
+    setTrainerReviewStatus('');
     loadTrainerReviews(trainerId).catch((error) => {
       console.error('Trainer Review Non-Blocking Error:', error);
       if (reviewSummary) reviewSummary.innerText = '리뷰 요약을 불러오지 못했습니다.';
@@ -510,10 +519,11 @@ async function showTrainerDetail(trainerId) {
     });
   } catch (error) {
     console.error('Trainer Detail Error:', error);
-    renderTrainerDetailError(container, `불러오기 실패: ${error.message || '전문가 정보를 불러오지 못했습니다.'}`);
-    if (reviewSummary) reviewSummary.innerText = '리뷰 요약을 불러오지 못했습니다.';
-    if (reviewList) reviewList.innerHTML = '<div class="empty-state">리뷰 로드 실패</div>';
-    setTrainerReviewStatus('리뷰 로드 실패', 'error');
+    renderTrainerDetailError(
+      container,
+      `불러오기 실패: ${error.message || '전문가 정보를 불러오지 못했습니다.'}`,
+      TRAINER_REVIEW_PROFILE_HINT
+    );
     safeShowToast('전문가 정보를 불러오지 못했습니다.', 'error');
   }
 }
@@ -653,12 +663,50 @@ function setTrainerReviewStatus(message, type = 'info') {
   }
 }
 
-function renderTrainerDetailError(container, message) {
+function resetTrainerDetailState() {
+  const container = document.getElementById('trainer-detail-content');
+  const form = document.getElementById('form-trainer-review');
+  const reviewSummary = document.getElementById('trainer-review-summary');
+  const reviewList = document.getElementById('trainer-review-list');
+  const reviewTrainerIdInput = document.getElementById('review-trainer-id');
+
+  if (container) {
+    container.innerHTML = '<div class="loading-spinner">✨ 전문가 프로필을 불러오는 중...</div>';
+  }
+  if (form) form.reset();
+  if (reviewTrainerIdInput) reviewTrainerIdInput.value = '';
+  if (reviewSummary) reviewSummary.innerText = '불러오는 중...';
+  if (reviewList) reviewList.innerHTML = '';
+
+  currentReviewTrainerId = null;
+  setTrainerReviewStatus('');
+  setTrainerReviewSectionVisible(false);
+}
+
+function setTrainerReviewSectionVisible(isVisible) {
+  const section = document.getElementById('trainer-review-section');
+  const form = document.getElementById('form-trainer-review');
+  if (section) {
+    section.hidden = !isVisible;
+  }
+  if (form) {
+    const controls = form.querySelectorAll('input, textarea, button');
+    controls.forEach((control) => {
+      if (control.type === 'hidden') return;
+      control.disabled = !isVisible;
+    });
+  }
+}
+
+function renderTrainerDetailError(container, message, reviewHint) {
   if (!container) return;
+  setTrainerReviewSectionVisible(false);
+  setTrainerReviewStatus('');
   container.innerHTML = `
     <div class="empty-state">
       <div style="font-weight: 700;">불러오기 실패</div>
       <div style="margin-top: 8px;">${escapeHtml(message)}</div>
+      ${reviewHint ? `<div style="margin-top: 8px; color: var(--text-muted);">${escapeHtml(reviewHint)}</div>` : ''}
       <button class="btn-primary" style="margin-top: 14px;" onclick="window.switchView('view-home')">홈으로 돌아가기</button>
     </div>
   `;
@@ -745,7 +793,7 @@ function renderTrainerReviewList(reviews) {
 }
 
 async function loadTrainerReviews(trainerId) {
-  console.log(`[review] load trainerId=${trainerId}`);
+  console.log(`[review] load id=${trainerId || ''}`);
   const listEl = document.getElementById('trainer-review-list');
   if (!listEl) return;
   if (!trainerId) {
@@ -782,8 +830,10 @@ async function handleTrainerReviewSubmit(e) {
   const rating = Number(ratingInput?.value);
   const comment = String(commentInput?.value || '').trim();
 
+  console.log(`[review] save id=${reviewTrainerId || ''}`);
+
   if (!reviewTrainerId) {
-    setTrainerReviewStatus('등록 실패: 트레이너 정보가 없습니다.', 'error');
+    setTrainerReviewStatus('등록 실패: 전문가 식별자 없음', 'error');
     return;
   }
   if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
