@@ -275,7 +275,7 @@ async function renderTrainersInGym(gymId) {
     const filtered = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const mockTrainers = [
       {
-        id: 'mock-trainer-1',
+        id: 'trainer_kim',
         gymId,
         name: '김트레이너',
         specialty: '퍼스널 트레이닝',
@@ -283,7 +283,7 @@ async function renderTrainersInGym(gymId) {
         isEarlyVerified: true
       },
       {
-        id: 'mock-trainer-2',
+        id: 'trainer_lee',
         gymId,
         name: '이코치',
         specialty: '체형 교정',
@@ -291,7 +291,7 @@ async function renderTrainersInGym(gymId) {
         isEarlyVerified: false
       },
       {
-        id: 'mock-trainer-3',
+        id: 'trainer_park',
         gymId,
         name: '박헬스',
         specialty: '기초 체력 향상',
@@ -425,35 +425,39 @@ async function showGymDetail(gymId) {
  * Show Trainer Detail
  */
 async function showTrainerDetail(trainerId) {
-  if (!trainerId || trainerId === 'undefined') {
-    showToast('유효하지 않은 전문가 정보입니다.', 'error');
-    return;
-  }
-
   const container = document.getElementById('trainer-detail-content');
   if (!container) return;
   const reviewSummary = document.getElementById('trainer-review-summary');
   const reviewList = document.getElementById('trainer-review-list');
   const reviewTrainerIdInput = document.getElementById('review-trainer-id');
 
-  switchView('view-trainer-detail');
-  window.scrollTo(0, 0);
-
-  const backBtn = document.getElementById('btn-back-trainer');
-  if (backBtn) {
-    backBtn.onclick = () => window.switchView('view-home');
-  }
-
-  container.innerHTML = '<div class="loading-spinner">✨ 전문가 프로필을 불러오는 중...</div>';
-  if (reviewSummary) reviewSummary.innerText = '리뷰 요약 준비 중...';
-  if (reviewList) reviewList.innerHTML = '<div class="loading-spinner">리뷰 데이터를 불러오는 중...</div>';
-  setTrainerReviewStatus('');
-  currentReviewTrainerId = trainerId;
-  if (reviewTrainerIdInput) reviewTrainerIdInput.value = trainerId;
-
   try {
-    console.log(`Fetching trainer detail from Firestore for ID: ${trainerId}`);
+    console.log(`[trainer] showTrainerDetail trainerId=${trainerId}`);
+    switchView('view-trainer-detail');
+    window.scrollTo(0, 0);
+
+    const backBtn = document.getElementById('btn-back-trainer');
+    if (backBtn) {
+      backBtn.onclick = () => window.switchView('view-home');
+    }
+
+    if (!trainerId || trainerId === 'undefined') {
+      renderTrainerDetailError(container, '불러오기 실패: 유효하지 않은 전문가 정보입니다.');
+      if (reviewSummary) reviewSummary.innerText = '리뷰 요약을 불러올 수 없습니다.';
+      if (reviewList) reviewList.innerHTML = '<div class="empty-state">리뷰 로드 실패</div>';
+      setTrainerReviewStatus('리뷰 로드 실패', 'error');
+      return;
+    }
+
+    container.innerHTML = '<div class="loading-spinner">✨ 전문가 프로필을 불러오는 중...</div>';
+    if (reviewSummary) reviewSummary.innerText = '리뷰 요약 준비 중...';
+    if (reviewList) reviewList.innerHTML = '<div class="loading-spinner">리뷰 데이터를 불러오는 중...</div>';
+    setTrainerReviewStatus('');
+    currentReviewTrainerId = trainerId;
+    if (reviewTrainerIdInput) reviewTrainerIdInput.value = trainerId;
+
     const trainerDoc = await getDoc(doc(db, 'trainers', trainerId));
+    console.log(`[trainer] loaded trainer doc exists=${trainerDoc.exists()}`);
     if (!trainerDoc.exists()) throw new Error('전문가 정보를 찾을 수 없습니다.');
     const trainer = trainerDoc.data();
 
@@ -497,12 +501,20 @@ async function showTrainerDetail(trainerId) {
       </div>
     `;
 
-    await loadTrainerReviews(trainerId);
     if (window.lucide) lucide.createIcons();
+    loadTrainerReviews(trainerId).catch((error) => {
+      console.error('Trainer Review Non-Blocking Error:', error);
+      if (reviewSummary) reviewSummary.innerText = '리뷰 요약을 불러오지 못했습니다.';
+      if (reviewList) reviewList.innerHTML = '<div class="empty-state">리뷰 로드 실패</div>';
+      setTrainerReviewStatus('리뷰 로드 실패', 'error');
+    });
   } catch (error) {
     console.error('Trainer Detail Error:', error);
-    showToast('전문가 정보를 불러오지 못했습니다.', 'error');
-    setTrainerReviewStatus('리뷰 데이터를 불러오지 못했습니다.', 'error');
+    renderTrainerDetailError(container, `불러오기 실패: ${error.message || '전문가 정보를 불러오지 못했습니다.'}`);
+    if (reviewSummary) reviewSummary.innerText = '리뷰 요약을 불러오지 못했습니다.';
+    if (reviewList) reviewList.innerHTML = '<div class="empty-state">리뷰 로드 실패</div>';
+    setTrainerReviewStatus('리뷰 로드 실패', 'error');
+    safeShowToast('전문가 정보를 불러오지 못했습니다.', 'error');
   }
 }
 
@@ -641,6 +653,17 @@ function setTrainerReviewStatus(message, type = 'info') {
   }
 }
 
+function renderTrainerDetailError(container, message) {
+  if (!container) return;
+  container.innerHTML = `
+    <div class="empty-state">
+      <div style="font-weight: 700;">불러오기 실패</div>
+      <div style="margin-top: 8px;">${escapeHtml(message)}</div>
+      <button class="btn-primary" style="margin-top: 14px;" onclick="window.switchView('view-home')">홈으로 돌아가기</button>
+    </div>
+  `;
+}
+
 function getReviewCreatedAtMs(review) {
   const createdAt = review?.createdAt;
   if (!createdAt) return 0;
@@ -722,6 +745,7 @@ function renderTrainerReviewList(reviews) {
 }
 
 async function loadTrainerReviews(trainerId) {
+  console.log(`[review] load trainerId=${trainerId}`);
   const listEl = document.getElementById('trainer-review-list');
   if (!listEl) return;
   if (!trainerId) {
