@@ -22,16 +22,62 @@
       } catch (error) { }
 
       var currentUrl = window.location.href;
-      var chromeUrl = 'googlechrome://' + currentUrl.replace(/^https?:\/\//i, '');
-      window.location.href = chromeUrl;
-      window.setTimeout(function () {
+      var hostPath = currentUrl.replace(/^https?:\/\//i, '');
+      var chromeSchemeUrls = [];
+      if (/^https:/i.test(currentUrl)) {
+        chromeSchemeUrls.push('googlechromes://' + hostPath);
+      }
+      chromeSchemeUrls.push('googlechrome://' + hostPath);
+      chromeSchemeUrls.push('googlechrome:' + currentUrl);
+
+      function tryOpenChrome() {
+        var i = 0;
+        function runNext() {
+          if (i >= chromeSchemeUrls.length) return;
+          var target = chromeSchemeUrls[i++];
+          try {
+            window.location.href = target;
+          } catch (error) { }
+
+          try {
+            if (document.body) {
+              var frame = document.createElement('iframe');
+              frame.style.display = 'none';
+              frame.src = target;
+              document.body.appendChild(frame);
+              window.setTimeout(function () {
+                if (frame.parentNode) frame.parentNode.removeChild(frame);
+              }, 500);
+            }
+          } catch (error) { }
+
+          if (i < chromeSchemeUrls.length) {
+            window.setTimeout(runNext, 220);
+          }
+        }
+        runNext();
+      }
+
+      function ensureChromeBanner() {
         if (!document.body || document.getElementById('chrome-open-banner')) return;
         var banner = document.createElement('div');
         banner.id = 'chrome-open-banner';
         banner.style.cssText = 'position:fixed;left:12px;right:12px;bottom:24px;z-index:9999;background:#0f172a;color:#fff;border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:600;';
-        banner.innerHTML = '<span>PC에서는 Chrome으로 여는 것을 권장합니다.</span><a href="' + chromeUrl + '" style="color:#0f172a;background:#fff;padding:8px 10px;border-radius:8px;text-decoration:none;font-weight:700;">Chrome으로 열기</a>';
+        banner.innerHTML = '<span>PC에서는 Chrome으로 여는 것을 권장합니다.</span><button id="btn-open-chrome" type="button" style="color:#0f172a;background:#fff;padding:8px 10px;border-radius:8px;text-decoration:none;font-weight:700;border:0;cursor:pointer;">Chrome으로 열기</button>';
         document.body.appendChild(banner);
-      }, 900);
+
+        var btn = document.getElementById('btn-open-chrome');
+        if (btn) {
+          btn.addEventListener('click', function () {
+            tryOpenChrome();
+          });
+        }
+      }
+
+      window.setTimeout(function () {
+        tryOpenChrome();
+        window.setTimeout(ensureChromeBanner, 900);
+      }, 50);
     })();
   </script>
 
