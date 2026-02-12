@@ -10,7 +10,7 @@ import {
   db, collection, onSnapshot, query, orderBy,
   getDoc, doc, getDocs, where, addDoc,
   serverTimestamp, limit, signInWithPopup
-} from './firebase-config.js?v=3.7';
+} from './firebase-config.js?v=3.8';
 
 // Global error handling
 window.addEventListener('error', (e) => {
@@ -29,9 +29,7 @@ function init() {
   initDetailEvents();
   initModalEvents();
   initTrainerReviewEvents();
-  if (window.lucide) {
-    lucide.createIcons();
-  }
+  safeCreateIcons();
 
   // High-End Splash Screen Flow
   const splash = document.getElementById('view-splash');
@@ -160,7 +158,7 @@ function switchView(viewId) {
   views.forEach(v => v.classList.remove('active'));
   targetView.classList.add('active');
   window.scrollTo(0, 0);
-  setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
+  setTimeout(() => { safeCreateIcons(); }, 100);
 
   if (viewId === 'view-home') {
     renderEarlyVerifiedTrainers().catch((error) => {
@@ -253,7 +251,7 @@ async function renderGymList() {
     `).join('');
     markHomeLoadResolved(container);
 
-    if (window.lucide) lucide.createIcons();
+    safeCreateIcons();
   } catch (error) {
     console.error('Gym List Error:', error);
     const alreadyTimedOut = container.dataset.loadState === 'error' && container.dataset.loadSource === 'timeout';
@@ -332,7 +330,7 @@ async function renderTrainersInGym(gymId) {
     `).join('')}
     `;
 
-    if (window.lucide) lucide.createIcons();
+    safeCreateIcons();
   } catch (error) {
     console.error('Trainers Fetch Error:', error);
     container.innerHTML = '<div class="empty-state">전문가 정보 준비 중...</div>';
@@ -491,10 +489,10 @@ async function showTrainerDetail(trainerId) {
       </div>
     `;
 
-    if (window.lucide) lucide.createIcons();
     currentReviewTrainerId = trainerId;
     if (reviewTrainerIdInput) reviewTrainerIdInput.value = trainerId;
     setTrainerReviewSectionVisible(true);
+    safeCreateIcons();
     if (reviewSummary) reviewSummary.innerText = '불러오는 중...';
     if (reviewList) reviewList.innerHTML = '<div class="loading-spinner">리뷰 데이터를 불러오는 중...</div>';
     setTrainerReviewStatus('');
@@ -631,6 +629,15 @@ function safeShowToast(message, type = 'info') {
   }
 }
 
+function safeCreateIcons() {
+  if (!window.lucide || typeof lucide.createIcons !== 'function') return;
+  try {
+    lucide.createIcons();
+  } catch (error) {
+    console.warn('Lucide icon render skipped:', error);
+  }
+}
+
 function setTrainerReviewStatus(message, type = 'info') {
   const statusEl = document.getElementById('trainer-review-status');
   if (!statusEl) return;
@@ -676,6 +683,13 @@ function setTrainerReviewSectionVisible(isVisible) {
   const form = document.getElementById('form-trainer-review');
   if (section) {
     section.hidden = !isVisible;
+    if (isVisible) {
+      section.removeAttribute('hidden');
+      section.style.display = '';
+    } else {
+      section.setAttribute('hidden', '');
+      section.style.display = 'none';
+    }
   }
   if (form) {
     const controls = form.querySelectorAll('input, textarea, button');
