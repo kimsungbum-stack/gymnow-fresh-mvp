@@ -9,45 +9,27 @@
   <script>
     (function () {
       var ua = navigator.userAgent || '';
-      var isIOS = /iPhone|iPad|iPod/i.test(ua);
-      var isAndroid = /Android/i.test(ua);
-      var isCriOS = /CriOS/i.test(ua);
-      var isChromeDesktop = /Chrome/i.test(ua) && !/Edg|OPR|SamsungBrowser|UCBrowser|YaBrowser/i.test(ua);
-      var isChrome = isCriOS || isChromeDesktop;
-      var isStandalone = false;
+      var isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+      if (isMobile) return;
 
-      try {
-        isStandalone = !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-      } catch (error) { }
-      if (window.navigator && window.navigator.standalone) isStandalone = true;
+      var isEdgeDesktop = /Edg\//i.test(ua);
+      if (!isEdgeDesktop) return;
 
-      if (isChrome || isStandalone || (!isIOS && !isAndroid)) return;
-
-      var storageKey = 'gymnow_chrome_redirect_attempted';
+      var storageKey = 'gymnow_desktop_chrome_redirect_attempted';
       try {
         if (window.sessionStorage && window.sessionStorage.getItem(storageKey) === '1') return;
         if (window.sessionStorage) window.sessionStorage.setItem(storageKey, '1');
       } catch (error) { }
 
       var currentUrl = window.location.href;
-      var chromeUrl = currentUrl
-        .replace(/^https:/i, 'googlechromes:')
-        .replace(/^http:/i, 'googlechrome:');
-
-      if (isAndroid) {
-        var noProto = currentUrl.replace(/^https?:\/\//i, '');
-        var intentUrl = 'intent://' + noProto + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(currentUrl) + ';end';
-        window.location.replace(intentUrl);
-        return;
-      }
-
-      window.location.replace(chromeUrl);
+      var chromeUrl = 'googlechrome://' + currentUrl.replace(/^https?:\/\//i, '');
+      window.location.href = chromeUrl;
       window.setTimeout(function () {
         if (!document.body || document.getElementById('chrome-open-banner')) return;
         var banner = document.createElement('div');
         banner.id = 'chrome-open-banner';
         banner.style.cssText = 'position:fixed;left:12px;right:12px;bottom:24px;z-index:9999;background:#0f172a;color:#fff;border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:600;';
-        banner.innerHTML = '<span>Chrome 앱으로 여는 것을 권장합니다.</span><a href="' + chromeUrl + '" style="color:#0f172a;background:#fff;padding:8px 10px;border-radius:8px;text-decoration:none;font-weight:700;">Chrome으로 열기</a>';
+        banner.innerHTML = '<span>PC에서는 Chrome으로 여는 것을 권장합니다.</span><a href="' + chromeUrl + '" style="color:#0f172a;background:#fff;padding:8px 10px;border-radius:8px;text-decoration:none;font-weight:700;">Chrome으로 열기</a>';
         document.body.appendChild(banner);
       }, 900);
     })();
